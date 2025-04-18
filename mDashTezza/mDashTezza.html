@@ -434,7 +434,7 @@
 											<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24">
 												<path fill="currentColor" d="M12 11a1 1 0 0 0-1 1a1 1 0 0 0 1 1a1 1 0 0 0 1-1a1 1 0 0 0-1-1m.5-9c4.5 0 4.61 3.57 2.25 4.75c-.99.49-1.43 1.54-1.62 2.47c.48.2.9.51 1.22.91c3.7-2 7.68-1.21 7.68 2.37c0 4.5-3.57 4.6-4.75 2.23c-.5-.99-1.56-1.43-2.49-1.62c-.2.48-.51.89-.91 1.23c1.99 3.69 1.2 7.66-2.38 7.66c-4.5 0-4.59-3.58-2.23-4.76c.98-.49 1.42-1.53 1.62-2.45c-.49-.2-.92-.52-1.24-.92C5.96 15.85 2 15.07 2 11.5C2 7 5.56 6.89 6.74 9.26c.5.99 1.55 1.42 2.48 1.61c.19-.48.51-.9.92-1.22C8.15 5.96 8.94 2 12.5 2Z" />
 											</svg>
-											<div class="popup" id="fan_popup" style="bottom:-3px;left:-45px;min-width:max-content"></div>
+											<div class="popup" id="fan_popup" style="bottom:-3px;left:-45px;min-width:max-content">...</div>
 										</div>
 										<div class="indicator" id="boost_i" style="margin-top:8px">
 											<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24">
@@ -461,7 +461,7 @@
 											<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24">
 												<path fill="currentColor" d="M7 4v2h3v2H7l-2 2v3H3v-3H1v8h2v-3h2v3h3l2 2h8v-4h2v3h3V9h-3v3h-2V8h-6V6h3V4H7Z" />
 											</svg>
-											<div class="popup popup-rlc" id="alarm_popup" style="bottom:auto;left:-50px;transform:translateY(16px)"></div>
+											<div class="popup popup-rlc" id="alarm_popup" style="bottom:auto;left:-50px;transform:translate(-16px,0)">...</div>
 										</div>
 									</div>
 								</div>
@@ -1728,6 +1728,7 @@ onLoad(function () {
 	bnd($("#afr"), "click", zoomOut);
 	bnd($("#zoom-reset"), "click", zoomReset);
 	bnd($("#speedometer"), "dblclick", changeBrand);
+	longTap("speedometer",changeBrand,1000);
 	setTimeout(function () {
 		$('title')[0].textContent = "RedBoxOBD - mDashTezza";
 	}, 500);

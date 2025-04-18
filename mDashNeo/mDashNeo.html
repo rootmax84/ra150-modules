@@ -1209,6 +1209,7 @@ onLoad(function() {
 
 	bnd($("#tel_needle"), "click", () => { if (telError.length > 0) showWarning(telError, 4000); });
 	bnd($("#main-dashboard"), "dblclick", () => { logger_card_toggle = !logger_card_toggle });
+	longTap("main-dashboard",function(){logger_card_toggle=!logger_card_toggle},1000);
 
 	setInterval(initOdometer, 1000);
 	voiceCMD(".pure-g");
