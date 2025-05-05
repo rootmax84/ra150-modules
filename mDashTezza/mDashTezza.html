@@ -116,6 +116,7 @@
 				background: #1a1a1a;
 				border-radius: 50%;
 				position: relative;
+				transform: translate3d(0, 0, 0);
 				box-shadow: 0 0 20px 5px rgba(0, 0, 0, 0.5);
 			}
 			.side-gauge {
@@ -593,7 +594,7 @@
 							</div>
 						</div>
 					</div>
-					<footer id="zoom-reset" style="text-align:center; font-size:10px; opacity:0; white-space:nowrap;">v1.07</footer>
+					<footer id="zoom-reset" style="text-align:center; font-size:10px; opacity:0; white-space:nowrap;">v1.08</footer>
 				</div>
 			</div>
 		</div>
@@ -977,7 +978,7 @@ function updateText(resp) {
 			} else {
 				if (beep && warn_sended && bot !== null) {
 					if (t_settings[24] === "enabled") {
-						Screenshot('main').then(formData => {
+						Screenshot('x').then(formData => {
 							return bot.sendPhoto(formData, "🟢 <code>OK</code>", t_settings[19]);
 						});
 					} else {
@@ -1096,7 +1097,7 @@ function do_beep() {
 			if (a_count == 1 && bot !== null) {
 				const code = calculate(data[33], true);
 				if (t_settings[24] === "enabled") {
-					Screenshot('main').then(formData => {
+					Screenshot('x').then(formData => {
 						return bot.sendPhoto(formData, `🔴 <code>${code}</code>`, t_settings[19]);
 					});
 				} else {
