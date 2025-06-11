@@ -1829,7 +1829,9 @@ let isOffline = false;
 function initOdometer() {
   if (gauges_error || alarm_on) { //Если offline ничего не делаем и сохраняем один раз текущее значение odo на всякий случай
 	if (!isOffline) {
-		localStorage.setItem('odo', odo_curr);
+		if (odo_curr > 0) { // записываем только если значение не пустое, может прилететь разовый gauges_error на старте и одометр обнулится
+		    localStorage.setItem('odo', odo_curr);
+		}
 		isOffline = true;
 	}
 	return;

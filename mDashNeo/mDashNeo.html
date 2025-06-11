@@ -278,7 +278,7 @@
                 </div> <!-- Закрытие pure-g -->
             </div> <!-- Закрытие content -->
         </div> <!-- Закрытие main -->
-		<footer style="text-align: right;font-size: 10px;opacity: .15;font-family: 'Techno';">v1.02</footer>
+		<footer style="text-align: right;font-size: 10px;opacity: .15;font-family: 'Techno';">v1.03</footer>
     </div> <!-- Закрытие layout -->
 <script>
 'use strict';
@@ -288,6 +288,7 @@ let a_count = 0;
 let old_rlc;
 let ext_cmd_stop = false; //Stop log by torque command or connect activity
 let data; //MCU data array
+let data_safe; //MCU safe config array
 let session = Date.now();
 let session_start = false;
 const t_settings = new Array(0);
@@ -340,8 +341,6 @@ function updateText(resp) {
 	if (resp != null && resp.len > 0) {
 		data = resp.text.split(";").slice(1, 37);
 		if (data.length === 36 && data[35] === "~") { //CRC
-			//Show dashboard
-			loaded = true;
 			
 			//Watch rollback code
 			calculate(data[33]);
@@ -461,7 +460,7 @@ function cIGN(a) {
 const gBit = (b, bitNumber) => (b >> bitNumber) & 0x01;
 function calculate(number) {
   const events = [
-    { name: "KNK", needleId: null },
+    { name: "KNK", needleId: "main-dashboard" },
     { name: "EGT", needleId: "egt_needle" },
     { name: "EOP", needleId: "eop_needle" },
     { name: "FLP", needleId: "flp_needle" },
@@ -830,6 +829,7 @@ function logs_handler() {
                             reject(new Error("Upload failed: " + resp));
                         } else {
                             telemetry_error = false;
+                            telError = '';
                             longOffline = false;
                             session_start ? resolve() : reject(new Error("Waiting session start")); // Успешная загрузка, если сессия начата
                         }
@@ -908,7 +908,9 @@ let isOffline = false;
 function initOdometer() {
   if (gauges_error || alarm_on) { //Если offline ничего не делаем и сохраняем один раз текущее значение odo на всякий случай
 	if (!isOffline) {
-		localStorage.setItem('odo', odo_curr);
+		if (odo_curr > 0) { // записываем только если значение не пустое, может прилететь разовый gauges_error на старте и одометр обнулится
+		    localStorage.setItem('odo', odo_curr);
+		}
 		isOffline = true;
 	}
 	return;
@@ -1261,13 +1263,98 @@ function restoreFilter() {
   element.style.filter = filters[currentIndex];
 }
 
+const bars_display = [
+  'none',
+  'flex'
+];
+
+function toggleBars() {
+  const elements = document.querySelectorAll('.status-bar');
+  if (!elements.length) return;
+
+  // Get current state from localStorage (default: 1 = 'flex')
+  let currentIndex = parseInt(localStorage.getItem('showBars'));
+  if (isNaN(currentIndex)) currentIndex = 1; // Default: show bars
+
+  // Toggle between 0 and 1
+  currentIndex = (currentIndex + 1) % bars_display.length;
+
+  // Save new state
+  localStorage.setItem('showBars', currentIndex.toString());
+  
+  // Apply to all elements
+  elements.forEach(element => {
+    element.style.display = bars_display[currentIndex];
+  });
+}
+
+// Restore state on page load
+function restoreBars() {
+  const elements = document.querySelectorAll('.status-bar');
+  if (!elements.length) return;
+
+  // Get current state (default: 1 = 'flex')
+  let currentIndex = parseInt(localStorage.getItem('showBars'));
+  if (isNaN(currentIndex)) currentIndex = 1;
+
+  // Apply to all elements
+  elements.forEach(element => {
+    element.style.display = bars_display[currentIndex];
+  });
+}
+
 // Переключение фильтров тапом тремя пальцами
 longTap("main-dashboard", null, 500, null, () => {
   toggleFilter();	
   brr(50);
 });
 
+// Переключение шкал тапом двумя пальцами
+longTap("main-dashboard", null, 500, () => {
+  toggleBars();	
+  brr(50);
+}, null);
+
+function readSafe() {
+    ajaxSpin('POST', "/console/clear", none, none);
+    ajaxSpin('POST', "/console/send?text=" + encodeURIComponent("/rm") + nr, none, none);
+    fetchSafe(150, false);
+}
+
+function fetchSafe(delay, repeat) {
+    window.setTimeout(function() {
+        ajaxJson('GET', "/console/text",
+            function(resp_safe) {
+                let dly = updateSafe(resp_safe);
+                if (repeat) fetchSafe(dly, repeat);
+                alarm_count = 0;
+            },
+            function() {
+                    setTimeout(function() {
+                        readSafe()
+                    }, 3000);
+            });
+    }, delay);
+}
+
+function updateSafe(resp_safe) {
+
+    if (resp_safe != null && resp_safe.len > 0) {
+        data_safe = resp_safe.text.split(";").slice(1, 406);
+
+        if (data_safe.length !== 405 || data_safe[404] !== "~") {
+            readSafe();
+            return;
+        }
+        loaded = true;
+		
+    } else readSafe();
+}
+
 onLoad(function() {
+	// читаем конфиг MCU
+	readSafe();
+	
 	// Загружаем фильтр
 	restoreFilter();
 	
@@ -1276,6 +1363,9 @@ onLoad(function() {
 	
     // Инициализация компонентов
     initializeDisplays();
+
+    // Загружаем отображение шкал
+    restoreBars();
 
 	dynamicManifest("mDashNeo");
 	setTimeout(function() {
