@@ -12,5 +12,10 @@
 #### mDashTezza
 ![Screenshot_20250406_134849_com_android_chrome_SameTaskWebApkActivity](https://github.com/user-attachments/assets/ef281ed1-eaeb-475f-87b7-47700d880560)
 
+#### mDashQuix
+![Screenshot_20250406_134900_com_android_chrome_SameTaskWebApkActivity](https://github.com/user-attachments/assets/bd1a5f02-4e20-4413-9224-cca845b7c7e0)
+
+
+
 
 
