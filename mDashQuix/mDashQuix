@@ -130,6 +130,7 @@
 	  width: 2px;
 	  height: 33px;
 	  background: #961911;
+	  transition: left .15s linear;
 	}
 
 	.tach-peak-label {
@@ -139,6 +140,7 @@
 	  font-size: 0.7rem;
 	  color: #961911;
 	  pointer-events: none;
+	  transition: left .15s linear;
 	}
 
 	.tach-value {
