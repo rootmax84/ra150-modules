@@ -992,11 +992,11 @@ function calculate(number) {
     events.forEach((sensor, index) => {
       if (gBit(number, index) === 1) {
         msg += `${sensor.name} `;
-        if (sensor.needleId !== null) {
+        if (sensor.needleId !== null && document.getElementById(sensor.needleId) !== null) {
           $(`#${sensor.needleId}`).classList.add("blink"); // Добавляем класс с анимацией
           hasErrors = true;
         }
-      } else if (sensor.needleId !== null) {
+      } else if (sensor.needleId !== null && document.getElementById(sensor.needleId) !== null) {
           $(`#${sensor.needleId}`).classList.remove("blink"); // Убираем анимацию
       }
     });
