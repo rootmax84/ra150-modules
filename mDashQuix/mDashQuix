@@ -504,23 +504,23 @@ localization.addMultiLanguageTranslations(translations);
 
 const sensors = [
 	{ label: localization.key['mdq.spd'], unit: localization.key['mdq.unit.kmh'], key: 'spd', min: '', max: 0, id: 'spd' },
-	{ label: localization.key['mdq.ild'], unit: '%',    key: 'ild', min: 0, max: 0, id: 'ild' },
+	{ label: localization.key['mdq.ild'], unit: '%',    key: 'ild', min: '', max: 0, id: 'ild' },
 	{ label: localization.key['mdq.run'], unit: localization.key['mdq.unit.h'], key: 'run', min: 0, max: 0, id: 'run' },
-	{ label: localization.key['mdq.odo'], unit: localization.key['mdq.unit.km'], key: 'odo', min: 0, max: 0, id: 'odo' },
-	{ label: localization.key['mdq.fan'], unit: '%',    key: 'fan', min: 0, max: 0, id: 'fan' },
-	{ label: localization.key['mdq.bst'], unit: localization.key['mdq.unit.bar'], key: 'bst', min: 0, max: 0, id: 'bst' },
-	{ label: localization.key['mdq.bdc'], unit: '%',    key: 'bdc', min: 0, max: 0, id: 'bdc' },
-	{ label: localization.key['mdq.ect'], unit: '°C', key: 'ect', min: 0, max: 0, id: 'ect' },
-	{ label: localization.key['mdq.eot'], unit: '°C', key: 'eot', min: 0, max: 0, id: 'eot' },
-	{ label: localization.key['mdq.iat'], unit: '°C', key: 'iat', min: 0, max: 0, id: 'iat' },
-	{ label: localization.key['mdq.atf'], unit: '°C', key: 'atf', min: 0, max: 0, id: 'atf' },
-	{ label: localization.key['mdq.aat'], unit: '°C', key: 'aat', min: 0, max: 0, id: 'aat' },
-	{ label: localization.key['mdq.ext'], unit: '°C', key: 'ext', min: 0, max: 0, id: 'ext' },
-	{ label: localization.key['mdq.egt'], unit: '°C', key: 'egt', min: 0, max: 0, id: 'egt' },
-	{ label: localization.key['mdq.afr'], unit: '',     key: 'afr', min: 0, max: 0, id: 'afr' },
-	{ label: localization.key['mdq.vlt'], unit: localization.key['mdq.unit.v'], key: 'vlt', min: 0, max: 0, id: 'vlt' },
-	{ label: localization.key['mdq.eop'], unit: localization.key['mdq.unit.bar'], key: 'eop', min: 0, max: 0, id: 'eop' },
-	{ label: localization.key['mdq.flp'], unit: localization.key['mdq.unit.bar'], key: 'flp', min: 0, max: 0, id: 'flp' }
+	{ label: localization.key['mdq.odo'], unit: localization.key['mdq.unit.km'], key: 'odo', min: '', max: 0, id: 'odo' },
+	{ label: localization.key['mdq.fan'], unit: '%',    key: 'fan', min: 100, max: 0, id: 'fan' },
+	{ label: localization.key['mdq.bst'], unit: localization.key['mdq.unit.bar'], key: 'bst', min: 2, max: 0, id: 'bst' },
+	{ label: localization.key['mdq.bdc'], unit: '%',  key: 'bdc', min: 0, max: 0, id: 'bdc' },
+	{ label: localization.key['mdq.ect'], unit: '°C', key: 'ect', min: 150, max: 0, id: 'ect' },
+	{ label: localization.key['mdq.eot'], unit: '°C', key: 'eot', min: 150, max: 0, id: 'eot' },
+	{ label: localization.key['mdq.iat'], unit: '°C', key: 'iat', min: 150, max: 0, id: 'iat' },
+	{ label: localization.key['mdq.atf'], unit: '°C', key: 'atf', min: 150, max: 0, id: 'atf' },
+	{ label: localization.key['mdq.aat'], unit: '°C', key: 'aat', min: 150, max: 0, id: 'aat' },
+	{ label: localization.key['mdq.ext'], unit: '°C', key: 'ext', min: 150, max: 0, id: 'ext' },
+	{ label: localization.key['mdq.egt'], unit: '°C', key: 'egt', min: 999, max: 0, id: 'egt' },
+	{ label: localization.key['mdq.afr'], unit: '',   key: 'afr', min: 25, max: 0, id: 'afr' },
+	{ label: localization.key['mdq.vlt'], unit: localization.key['mdq.unit.v'], key: 'vlt', min: 15, max: 0, id: 'vlt' },
+	{ label: localization.key['mdq.eop'], unit: localization.key['mdq.unit.bar'], key: 'eop', min: 10, max: 0, id: 'eop' },
+	{ label: localization.key['mdq.flp'], unit: localization.key['mdq.unit.bar'], key: 'flp', min: 10, max: 0, id: 'flp' }
 ];
 
 const rpmMax = 7000;
@@ -585,9 +585,9 @@ function renderGauges() {
 		div.className = 'gauge';
 		div.id = `${sensor.id}`;
 		div.innerHTML = `
-			<div class="min-value">${sensor.min}</div>
-			<div class="max-value">${sensor.max}</div>
-			<div class="value" id="${sensor.key}Value">--</div>
+			<div class="min-value">-</div>
+			<div class="max-value">-</div>
+			<div class="value">--</div>
 			<div class="label">${sensor.label}</div>
 			<div class="unit">${sensor.unit}</div>
 		`;
@@ -901,6 +901,9 @@ function updateText(resp) {
 
 			//egt
 			updateGauge("egt", data[20]);
+			
+			//ild
+			updateGauge("ild", data[13], '');
 
 			//rollback
 			if (data[33] > 0) {
@@ -936,7 +939,7 @@ function updateText(resp) {
 			motorhours = `${parseInt(data[24] / 60)}`;
 			engine_run = `${String(parseInt((data[23] / 60) / 60)).padStart(2, '0')}:${String(parseInt((data[23] / 60) % 60)).padStart(2, '0')}`;
 
-			updateGauge("odo", odo_dash);
+			updateGauge("odo", odo_dash, '');
 			
 			if (data[26] == 1) updateGauge("fan", localization.key['mdq.back.on'], '', '');
 			else if (data[26] == 0) updateGauge("fan", localization.key['mdq.back.off'], '', '');
@@ -1476,7 +1479,7 @@ function resetAllGauges() {
   sensors.forEach(sensor => {
     // Сбрасываем текущее значение, min и max в 0
     sensor.value = 0;
-    sensor.min = 0;
+    sensor.min = 999;
     sensor.max = 0;
     
     // Находим элемент датчика на странице
@@ -1486,15 +1489,15 @@ function resetAllGauges() {
     // Обновляем отображаемое значение
     const valueElement = gaugeElement.querySelector('.value');
     if (valueElement) {
-      valueElement.textContent = '0';
+      valueElement.textContent = '--';
     }
     
     // Обновляем min и max в интерфейсе
     const minElement = gaugeElement.querySelector('.min-value');
     const maxElement = gaugeElement.querySelector('.max-value');
     
-    if (minElement) minElement.textContent = '0';
-    if (maxElement) maxElement.textContent = '0';
+    if (minElement) minElement.textContent = '-';
+    if (maxElement) maxElement.textContent = '-';
   });
 }
 
