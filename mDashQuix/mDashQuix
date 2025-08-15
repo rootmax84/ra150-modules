@@ -348,7 +348,7 @@
 			</div>
 		</div>
 	</div>
-<footer style="text-align: right;font-size: 10px;opacity: .15; font-family: monospace">v1.00</footer>
+<footer style="text-align: right;font-size: 10px;opacity: .15; font-family: monospace">v1.01</footer>
 <script>
 'use strict';
 
@@ -633,25 +633,36 @@ function updateGauge(id, value, min = null, max = null) {
   if (!sensor) return; // Если датчик не найден, выходим
   
   // Обновляем текущее значение датчика
+  const initialMin = sensor.min === '' ? Infinity : sensor.min;
+  const initialMax = sensor.max === '' ? -Infinity : sensor.max;
+
+  // Если датчик ещё не обновлялся, инициализируем min/max
+  if (sensor.currentMin === undefined) sensor.currentMin = initialMin;
+  if (sensor.currentMax === undefined) sensor.currentMax = initialMax;
+
   sensor.value = value;
   
   // Автоматически определяем min и max, если они не переданы
   if (min == null) {
-    min = Math.min(sensor.min, value); // Берем минимальное из текущего min и нового значения
+    min = Math.min(sensor.currentMin, value);
   }
   if (max == null) {
-    max = Math.max(sensor.max, value); // Берем максимальное из текущего max и нового значения
+    if (sensor.currentMax === 0 && value < 0) {
+      max = value;
+    } else {
+      max = Math.max(sensor.currentMax, value);
+    }
   }
   
   // Обновляем min и max в объекте датчика
-  sensor.min = min;
-  sensor.max = max;
+  sensor.currentMin = min;
+  sensor.currentMax = max;
   
   // Находим элемент датчика на странице
   const gaugeElement = document.getElementById(id);
-  if (!gaugeElement) return; // Если элемент не найден, выходим
   
   // Обновляем отображаемое значение
+  if (!gaugeElement) return; // Если элемент не найден, выходим
   const valueElement = gaugeElement.querySelector('.value');
   if (valueElement) {
     valueElement.textContent = typeof value === 'number' 
@@ -1479,14 +1490,15 @@ function resetAllGauges() {
   sensors.forEach(sensor => {
     // Сбрасываем текущее значение, min и max в 0
     sensor.value = 0;
-    sensor.min = 999;
-    sensor.max = 0;
     
-    // Находим элемент датчика на странице
+    // Полный сброс min/max (чтобы новые значения сами их перезаписали)
+    sensor.min = Infinity;
+    sensor.max = -Infinity;
+    
     const gaugeElement = document.getElementById(sensor.id);
-    if (!gaugeElement) return; // Если элемент не найден, переходим к следующему
     
     // Обновляем отображаемое значение
+    if (!gaugeElement) return; // Если элемент не найден, переходим к следующему
     const valueElement = gaugeElement.querySelector('.value');
     if (valueElement) {
       valueElement.textContent = '--';
