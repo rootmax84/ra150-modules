@@ -1488,12 +1488,12 @@ function resetOdo() {
 function resetAllGauges() {
   // Проходим по всем датчикам в массиве sensors
   sensors.forEach(sensor => {
-    // Сбрасываем текущее значение, min и max в 0
+    // Сбрасываем текущее значение
     sensor.value = 0;
     
-    // Полный сброс min/max (чтобы новые значения сами их перезаписали)
-    sensor.min = Infinity;
-    sensor.max = -Infinity;
+    // Восстанавливаем исходные min/max значения из конфигурации
+    sensor.currentMin = sensor.min === '' ? Infinity : sensor.min;
+    sensor.currentMax = sensor.max === '' ? -Infinity : sensor.max;
     
     const gaugeElement = document.getElementById(sensor.id);
     
