@@ -1147,6 +1147,8 @@ let logsRestored = false;
 let longOffline = false;
 let lastProcessTime = 0; // Время последнего вызова processLogs
 let datapoints = 0;
+let isProcessing = false; // Защита от параллельной обработки
+let session_queued = false;
 function logs_handler() {
     const currentTime = Date.now();
 
@@ -1212,13 +1214,12 @@ function logs_handler() {
     if (alarm_on) {
         // Save logs to IndexedDB. Min logs count depend from frequency
         if (t_log.length > map(freq, 100, 1000, 100, 10)) {
-         !session_start && t_log.unshift(`session=${session}&time=${session}&lang=${lang}&profileName=${t_settings[2] || 'RedManage'}`); //Add session info if started offline
          saveLogsToDB(t_log);
         }
         t_log = []; // Clear in-memory log array
-
         session_start = false; // Start new session request
         logsRestored = false; // Reset the flag to allow restoration later
+        session_queued = false;
         session = currentTime; // New session id
     } else if (!logsRestored) {
         // Only load logs from IndexedDB once when alarm_on is deactivated
@@ -1273,16 +1274,11 @@ function logs_handler() {
      const normalInterval = freq; // Интервал freq мс
      const errorInterval = 10000; // Интервал 10 сек
 
-        if (!session_start && !telemetry_error) { // Upload session info first
+        // Если сессия ещё не подтверждена на сервере и ещё не помещена в очередь — ставим её в очередь
+        if (!session_start && !session_queued) {
             const start_request = `session=${session}&time=${session}&lang=${lang}&profileName=${t_settings[2] || 'RedManage'}`;
-                xhr_timeout = 5000;
-                ajaxReq("POST", t_settings[1], function(resp) {
-                    if (resp == "OK!") {
-                        session_start = true;
-                        datapoints = 0; // Reset counter
-                        showNotification(localization.key['dash.tel.start']);
-                    }
-                }, none, start_request, t_settings[3]);
+            t_log.push("SESSION_START:" + start_request);
+            session_queued = true; // отмечаем, что запрос уже в очереди (но НЕ подтверждён)
         }
 
         const request = [
@@ -1336,11 +1332,10 @@ function logs_handler() {
 
         xhr_timeout = t_log.length > 10 ? 60000 : 1000; // Change xhr timeout when we have a queue
 
-        const maxUploads = Math.min(10, t_log.length); // Максимальное количество логов для отправки
-        let uploads = 0; // Счетчик успешных загрузок
-
         const uploadLog = (log) => {
             return new Promise((resolve, reject) => {
+                const payload = log.startsWith("SESSION_START:") ? log.replace("SESSION_START:", "") : log;
+
                 ajaxReq("POST", t_settings[1],
                     (resp) => {
                         if (resp !== "OK!") {
@@ -1350,7 +1345,7 @@ function logs_handler() {
                         } else {
                             telemetry_error = false;
                             longOffline = false;
-                            session_start ? resolve() : reject(new Error("Waiting session start")); // Успешная загрузка, если сессия начата
+                            resolve({ isSessionStart: log.startsWith("SESSION_START:") });
                         }
                     },
                     (s, st) => {
@@ -1359,30 +1354,49 @@ function logs_handler() {
                         longOffline = true;
                         reject(new Error("Upload error: " + (s !== 0 ? (st || "Service unavailable") : "Service unavailable")));
                     },
-                    session_start ? log : `lang=${lang}`, // Не отправляем данные, если сессия не начата, только установленный язык для перевода сообщений от сервера
+                    payload,
                     t_settings[3]
                 );
             });
         };
 
         const processLogs = async () => {
-            while (uploads < maxUploads && t_log.length) {
-                try {
-                    await uploadLog(t_log[0]); // Загружаем текущий лог
-                    t_log.shift(); // Удаляем первый элемент после успешной загрузки
-                    uploads++;
-                    datapoints++;
-                    if (datapoints >= SESS_LIMIT) {
-                        session_start = false; // Start new session request
-                        session = currentTime; // New session id
+            if (isProcessing) return;
+            isProcessing = true;
+            try {
+                while (t_log.length) {
+                    const isSessionStart = typeof t_log[0] === 'string' && t_log[0].indexOf('SESSION_START:') === 0;
+                    try {
+                        const res = await uploadLog(t_log[0]); // отправляем текущий лог
+                        // Если успешно — удаляем из очереди и обновляем состояние
+                        t_log.shift();
+
+                        if (res && res.isSessionStart) {
+                            // Подтверждение старта сессии от сервера
+                            session_start = true;
+                            session_queued = false;
+                            datapoints = 0;
+                            showNotification(localization.key['dash.tel.start']);
+                        } else {
+                            // Это обычный datapoint
+                            datapoints++;
+                            if (datapoints >= SESS_LIMIT) {
+                                session_start = false; // Start new session request
+                                session = Date.now(); // New session id
+                                // Флаг session_queued останется false, и в следующем цикле мы добавим новый SESSION_START
+                            }
+                        }
+
+                        if (t_log.length > 5) {
+                            $("#tel_popup").textContent = localization.key['dash.tel.queue'] + t_log.length; // Обновляем прогресс
+                        }
+                    } catch (error) {
+                        // При ошибке выходим — очередь остаётся
+                        break;
                     }
-                    if (t_log.length > 5) {
-                        $("#tel_popup").textContent = localization.key['dash.tel.queue'] + t_log.length; // Обновляем прогресс
-                    }
-                } catch (error) {
-//                    console.error(error); // Логируем ошибку
-                    break; // Прерываем, если возникла ошибка
                 }
+            } finally {
+                isProcessing = false;
             }
         };
         // Управление частотой вызова processLogs
@@ -2013,7 +2027,7 @@ function orientationAlert() {
 </tr>
 </table>
 
-<footer style="text-align:right; font-size:10px; opacity:.5;">v1.45</footer>
+<footer style="text-align:right; font-size:10px; opacity:.5;">v1.46</footer>
 </div>
 </div>
 </div>
