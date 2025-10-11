@@ -1533,6 +1533,7 @@ let lastProcessTime = 0; // Время последнего вызова process
 let datapoints = 0;
 let isProcessing = false; // Защита от параллельной обработки
 let session_queued = false;
+const MAX_PARALLEL_UPLOADS = 5;
 function logs_handler() {
     const currentTime = Date.now();
 
@@ -1745,44 +1746,56 @@ function logs_handler() {
         };
 
         const processLogs = async () => {
-            if (isProcessing) return;
-            isProcessing = true;
-            try {
-                while (t_log.length) {
-                    const isSessionStart = typeof t_log[0] === 'string' && t_log[0].indexOf('SESSION_START:') === 0;
-                    try {
-                        const res = await uploadLog(t_log[0]); // отправляем текущий лог
-                        // Если успешно — удаляем из очереди и обновляем состояние
-                        t_log.shift();
+          if (isProcessing) return;
+          isProcessing = true;
 
-                        if (res && res.isSessionStart) {
-                            // Подтверждение старта сессии от сервера
-                            session_start = true;
-                            session_queued = false;
-                            datapoints = 0;
-                            showNotification(localization.key['dash.tel.start']);
-                        } else {
-                            // Это обычный datapoint
-                            datapoints++;
-                            if (datapoints >= SESS_LIMIT) {
-                                session_start = false; // Start new session request
-                                session = Date.now(); // New session id
-                                // Флаг session_queued останется false, и в следующем цикле мы добавим новый SESSION_START
-                            }
-                        }
+          try {
+            while (t_log.length) {
+              const batch = t_log.slice(0, MAX_PARALLEL_UPLOADS); // берём первые 10
+              const results = await Promise.allSettled(batch.map(uploadLog));
 
-                        if (t_log.length > 5) {
-                            $("#tel_popup").textContent = localization.key['dash.tel.queue'] + t_log.length; // Обновляем прогресс
-                        }
-                    } catch (error) {
-                        // При ошибке выходим — очередь остаётся
-                        break;
+              let processedCount = 0;
+
+              for (let i = 0; i < results.length; i++) {
+                const res = results[i];
+                if (res.status === "fulfilled") {
+                  processedCount++;
+                  const isSessionStart = res.value && res.value.isSessionStart;
+                  if (isSessionStart) {
+                    session_start = true;
+                    session_queued = false;
+                    datapoints = 0;
+                    showNotification(localization.key['dash.tel.start']);
+                  } else {
+                    datapoints++;
+                    if (datapoints >= SESS_LIMIT) {
+                      session_start = false;
+                      session = Date.now();
                     }
+                  }
+                } else {
+                  // Ошибка — прерываем, чтобы не терять очередь
+                  telemetry_error = true;
+                  break;
                 }
-            } finally {
-                isProcessing = false;
+              }
+
+              // Удаляем успешно обработанные логи
+              t_log.splice(0, processedCount);
+
+              // Если была ошибка — выходим, не продолжаем дальше
+              if (telemetry_error) break;
+
+              // Обновляем прогресс
+              if (t_log.length > 5) {
+                $("#tel_popup").textContent = localization.key['dash.tel.queue'] + t_log.length;
+              }
             }
+          } finally {
+            isProcessing = false;
+          }
         };
+
         // Управление частотой вызова processLogs
         const currentInterval = telemetry_error ? errorInterval : normalInterval;
 
