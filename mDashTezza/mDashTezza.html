@@ -1281,13 +1281,33 @@ function logs_handler() {
         });
     }
 
+    function deleteFirstNFromDB(n, callback) {
+        openDB((db) => {
+            const transaction = db.transaction([storeName], 'readwrite');
+            const store = transaction.objectStore(storeName);
+            let count = 0;
+
+            store.openCursor().onsuccess = function(event) {
+                const cursor = event.target.result;
+                if (cursor && count < n) {
+                    store.delete(cursor.primaryKey);
+                    count++;
+                    cursor.continue();
+                } else {
+                    if (callback) callback(count);
+                }
+            };
+        });
+    }
+
     // Start new session if connection lost or alarm is on
     if (alarm_on) {
         // Save logs to IndexedDB. Min logs count depend from frequency
         if (t_log.length > map(freq, 100, 1000, 100, 10)) {
+         clearLogsFromDB(); // Clear the database after logs are retrieved
          saveLogsToDB(t_log);
+         t_log = []; // Clear in-memory log array
         }
-        t_log = []; // Clear in-memory log array
         session_start = false; // Start new session request
         logsRestored = false; // Reset the flag to allow restoration later
         session_queued = false;
@@ -1296,7 +1316,6 @@ function logs_handler() {
         // Only load logs from IndexedDB once when alarm_on is deactivated
         getLogsFromDB(function(logs) {
             t_log = logs.concat(t_log); // Restore logs from IndexedDB
-            clearLogsFromDB(); // Clear the database after logs are retrieved
             logsRestored = true; // Set the flag to prevent multiple restorations
         });
     }
@@ -1467,7 +1486,10 @@ function logs_handler() {
               }
 
               // Удаляем успешно обработанные логи
-              t_log.splice(0, processedCount);
+              if (processedCount > 0) {
+                t_log.splice(0, processedCount);
+                deleteFirstNFromDB(processedCount);
+              }
 
               // Если была ошибка — выходим, не продолжаем дальше
               if (telemetry_error) break;
