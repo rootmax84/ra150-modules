@@ -1188,7 +1188,7 @@ function logs_handler() {
     function saveLogsToDB(logs) {
         if (!logs || !logs.length) return;
 
-        const chunkSize = 1000;
+        const chunkSize = 10000;
         let index = 0;
 
         function writeNextChunk() {
@@ -1200,7 +1200,7 @@ function logs_handler() {
                 tx.oncomplete = () => {
                     index += chunkSize;
                     if (index < logs.length) {
-                        setTimeout(writeNextChunk, 50);
+                        setTimeout(writeNextChunk, 100);
                     } else {
                         idb_empty = false;
                     }
