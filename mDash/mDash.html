@@ -1527,81 +1527,99 @@ function download_log() {
 }
 
 const SESS_LIMIT = 100000;
+const MAX_PARALLEL_UPLOADS = 5;
+const IDB_SYNC_INTERVAL = 59000;
 let logsRestored = false;
+let restoringLogs = false;
+let isSavingToDB = false;
 let longOffline = false;
 let lastProcessTime = 0; // Время последнего вызова processLogs
+let lastIDBSyncTime = 0;
 let datapoints = 0;
 let isProcessing = false; // Защита от параллельной обработки
 let session_queued = false;
-const MAX_PARALLEL_UPLOADS = 5;
+let idb_empty = true;
+
 function logs_handler() {
     const currentTime = Date.now();
 
-    // IndexedDB operations
+    // IndexedDB: инициализация и операции
     const dbName = 'TelemetryQueueDB';
     const storeName = 'logs';
 
     function openDB(callback) {
         const request = indexedDB.open(dbName, 1);
 
-        request.onupgradeneeded = function(event) {
+        request.onupgradeneeded = (event) => {
             const db = event.target.result;
             if (!db.objectStoreNames.contains(storeName)) {
                 db.createObjectStore(storeName, { autoIncrement: true });
             }
         };
 
-        request.onsuccess = function(event) {
-            const db = event.target.result;
-            callback(db);
-        };
-
-//        request.onerror = function(event) {
-//            console.error('IndexedDB error:', event.target.errorCode);
-//        };
+        request.onsuccess = (event) => callback(event.target.result);
     }
 
-    function saveLogsToDB(logs) {
-        openDB(function(db) {
-            const transaction = db.transaction([storeName], 'readwrite');
-            const store = transaction.objectStore(storeName);
-            logs.forEach(log => store.add(log));
+    function clearLogsFromDB(callback) {
+        openDB((db) => {
+            const tx = db.transaction([storeName], 'readwrite');
+            const store = tx.objectStore(storeName);
+            const req = store.clear();
+            req.onsuccess = () => callback && callback();
         });
     }
 
-    function getLogsFromDB(callback) {
-        openDB(function(db) {
-            const transaction = db.transaction([storeName], 'readonly');
-            const store = transaction.objectStore(storeName);
-            const logs = [];
+    function saveLogsToDB(logs) {
+        if (!logs || !logs.length) return;
 
-            store.openCursor().onsuccess = function(event) {
+        const chunkSize = 1000;
+        let index = 0;
+
+        function writeNextChunk() {
+            openDB((db) => {
+                const tx = db.transaction([storeName], 'readwrite');
+                const store = tx.objectStore(storeName);
+                const chunk = logs.slice(index, index + chunkSize);
+                chunk.forEach((log) => store.add(log));
+                tx.oncomplete = () => {
+                    index += chunkSize;
+                    if (index < logs.length) {
+                        setTimeout(writeNextChunk, 50);
+                    } else {
+                        idb_empty = false;
+                    }
+                };
+            });
+        }
+
+        writeNextChunk();
+    }
+
+    function getLogsFromDB(callback) {
+        openDB((db) => {
+            const tx = db.transaction([storeName], 'readonly');
+            const store = tx.objectStore(storeName);
+            const logs = [];
+            store.openCursor().onsuccess = (event) => {
                 const cursor = event.target.result;
                 if (cursor) {
                     logs.push(cursor.value);
                     cursor.continue();
                 } else {
+                    idb_empty = logs.length === 0;
                     callback(logs);
                 }
             };
         });
     }
 
-    function clearLogsFromDB() {
-        openDB(function(db) {
-            const transaction = db.transaction([storeName], 'readwrite');
-            const store = transaction.objectStore(storeName);
-            store.clear();
-        });
-    }
-
     function deleteFirstNFromDB(n, callback) {
+        if (idb_empty) return callback && callback(0);
         openDB((db) => {
-            const transaction = db.transaction([storeName], 'readwrite');
-            const store = transaction.objectStore(storeName);
+            const tx = db.transaction([storeName], 'readwrite');
+            const store = tx.objectStore(storeName);
             let count = 0;
-
-            store.openCursor().onsuccess = function(event) {
+            store.openCursor().onsuccess = (event) => {
                 const cursor = event.target.result;
                 if (cursor && count < n) {
                     store.delete(cursor.primaryKey);
@@ -1614,58 +1632,73 @@ function logs_handler() {
         });
     }
 
-    // Start new session if connection lost or alarm is on
+    // Оффлайн переход
     if (alarm_on) {
-        // Save logs to IndexedDB. Min logs count depend from frequency
-        if (t_log.length > map(freq, 100, 1000, 100, 10)) {
-         clearLogsFromDB(); // Clear the database after logs are retrieved
-         saveLogsToDB(t_log);
-         t_log = []; // Clear in-memory log array
+        if (!isSavingToDB && t_log.length > map(freq, 100, 1000, 100, 10)) {
+            isSavingToDB = true;
+            const toSave = [...t_log];
+            t_log = [];
+            clearLogsFromDB(() => {
+                saveLogsToDB(toSave);
+                isSavingToDB = false;
+            });
         }
         session_start = false; // Start new session request
-        logsRestored = false; // Reset the flag to allow restoration later
+        logsRestored = false;  // Reset the flag to allow restoration later
+        restoringLogs = false;
         session_queued = false;
         session = currentTime; // New session id
-    } else if (!logsRestored) {
-        // Only load logs from IndexedDB once when alarm_on is deactivated
-        getLogsFromDB(function(logs) {
-            t_log = logs.concat(t_log); // Restore logs from IndexedDB
-            logsRestored = true; // Set the flag to prevent multiple restorations
+    }
+
+    // Онлайн переход (восстановление)
+    else if (!logsRestored && !restoringLogs) {
+        restoringLogs = true;
+        getLogsFromDB((logs) => {
+            if (logs.length > 0) {
+                t_log = logs.concat(t_log);
+            }
+            logsRestored = true;
+            restoringLogs = false;
         });
     }
 
+    // Проверка условий на выгрузку
     try {
-		if (!loaded || gauges_error || alarm_on || data[35] !== "~" || ext_cmd_stop || !gaugesTested) { // Don't write/upload logs if connection lost or stop signal or external cmd detected
-			setTimeout(logs_handler, 1000); // 1 seconds between offline call
-			return;
-		}
-    } catch(e) {
-		setTimeout(logs_handler, 1000);
-		return;
-	}
+        if (!loaded || gauges_error || alarm_on || data[35] !== "~" || ext_cmd_stop || !gaugesTested) {
+            lastIDBSyncTime = currentTime;
+            setTimeout(logs_handler, 1000);
+            return;
+        }
+    } catch (e) {
+        lastIDBSyncTime = currentTime;
+        setTimeout(logs_handler, 1000);
+        return;
+    }
 
-    //Local storage logs
+    // Local storage logs
     if (t_settings[13] === "enabled") {
         try {
             let storage_left = parseInt(map(logger.length, 0, 5000000, 0, 100));
             $("#sleft").textContent = storage_left + "%";
             if (storage_left < 100) {
-            logger += [currentTime, data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7], data[8], data[9], data[10],
-                data[11], data[12], data[13], data[14], data[15], data[16], data[17], data[20], data[21], data[22],
-                data[23], parseInt(data[24]/60), data[25], data[26], data[27], data[28], data[29],
-                data[30], data[31], data[32], data[33], gps_lat, gps_long, gps_speed, odo_dash].join(" ");
-                logger += "\n";
-            wr_freq++;
+                logger += [
+                    currentTime, data[0], data[1], data[2], data[3], data[4], data[5], data[6],
+                    data[7], data[8], data[9], data[10], data[11], data[12], data[13], data[14],
+                    data[15], data[16], data[17], data[20], data[21], data[22], data[23],
+                    parseInt(data[24] / 60), data[25], data[26], data[27], data[28],
+                    data[29], data[30], data[31], data[32], data[33], gps_lat, gps_long,
+                    gps_speed, odo_dash
+                ].join(" ") + "\n";
+                wr_freq++;
                 if (wr_freq >= t_settings[14] * 10) {
                     localStorage.setItem("log", logger); //Store log in local storage 5mb limit
                     wr_freq = 0;
                 }
-            }
-            else {
+            } else {
                 if (!logger_full) {
                     localStorage.setItem("log", logger);
                     logger_full = true;
-            }
+                }
                 showWarning(localization.key['dash.logger.full']);
             }
         } catch (e) {
@@ -1675,8 +1708,8 @@ function logs_handler() {
 
     // Telemetry upload
     if (t_settings[0] === "enabled" && t_settings[1].length > 0) {
-     const normalInterval = freq; // Интервал freq мс
-     const errorInterval = 10000; // Интервал 10 сек
+        const normalInterval = freq; // Интервал freq мс
+        const errorInterval = 10000; // Интервал 10 сек
 
         // Если сессия ещё не подтверждена на сервере и ещё не помещена в очередь — ставим её в очередь
         if (!session_start && !session_queued) {
@@ -1688,43 +1721,19 @@ function logs_handler() {
         const request = [
             "session=", session, "&id=RedManage&time=", currentTime, "&lang=", lang,
             "&kff1202=", ((data[8] - 101) / 100),
-            "&k5=", data[0],
-            "&k5c=", data[1],
-            "&kf=", data[2],
-            "&kb4=", data[3],
-            "&k46=", data[4],
-            "&k2101=", data[5],
-            "&kd=", data[6],
-            "&kc=", data[7],
-            "&kb=", data[8],
-            "&k10=", data[9],
-            "&k11=", data[10],
-            "&ke=", data[11],
-            "&k2112=", data[12],
-            "&k2100=", data[13],
-            "&k2113=", data[14],
-            "&k21cc=", data[15],
-            "&kff1214=", data[16],
-            "&kff1218=", data[17],
-            "&k78=", data[20],
-            "&k2111=", data[21],
-            "&k2119=", data[22],
-            "&k1f=", data[23],
-            "&k2118=", parseInt(data[24] / 60),
-            "&k2120=", data[25],
-            "&k2122=", data[26],
-            "&k2124=", data[27],
-            "&k21e1=", data[28],
-            "&k21e2=", data[29],
-            "&k2125=", data[30],
-            "&k2126=", data[31],
-            "&kff1238=", data[32],
-            "&k21fa=", data[33],
-            "&kff1006=", gps_lat,
-            "&kff1005=", gps_long,
-            "&kff1001=", gps_speed,
-            "&kff1204=", odo_trip,
-            "&kff120c=", odo_dash
+            "&k5=", data[0], "&k5c=", data[1], "&kf=", data[2],
+            "&kb4=", data[3], "&k46=", data[4], "&k2101=", data[5],
+            "&kd=", data[6], "&kc=", data[7], "&kb=", data[8],
+            "&k10=", data[9], "&k11=", data[10], "&ke=", data[11],
+            "&k2112=", data[12], "&k2100=", data[13], "&k2113=", data[14],
+            "&k21cc=", data[15], "&kff1214=", data[16], "&kff1218=", data[17],
+            "&k78=", data[20], "&k2111=", data[21], "&k2119=", data[22],
+            "&k1f=", data[23], "&k2118=", parseInt(data[24] / 60),
+            "&k2120=", data[25], "&k2122=", data[26], "&k2124=", data[27],
+            "&k21e1=", data[28], "&k21e2=", data[29], "&k2125=", data[30],
+            "&k2126=", data[31], "&kff1238=", data[32], "&k21fa=", data[33],
+            "&kff1006=", gps_lat, "&kff1005=", gps_long, "&kff1001=", gps_speed,
+            "&kff1204=", odo_trip, "&kff120c=", odo_dash
         ].join("");
 
         t_log.push(request); // Collect logs in array if connection to telemetry is lost
@@ -1739,7 +1748,6 @@ function logs_handler() {
         const uploadLog = (log) => {
             return new Promise((resolve, reject) => {
                 const payload = log.startsWith("SESSION_START:") ? log.replace("SESSION_START:", "") : log;
-
                 ajaxReq("POST", t_settings[1],
                     (resp) => {
                         if (resp !== "OK!") {
@@ -1756,7 +1764,7 @@ function logs_handler() {
                         telemetry_error = true;
                         $("#tel_popup").textContent = s !== 0 ? (!st ? localization.key['dash.tel.err'] : st) : localization.key['dash.tel.unav'];
                         longOffline = true;
-                        reject(new Error("Upload error: " + (s !== 0 ? (st || "Service unavailable") : "Service unavailable")));
+                        reject(new Error("Upload error"));
                     },
                     payload,
                     t_settings[3]
@@ -1765,62 +1773,57 @@ function logs_handler() {
         };
 
         const processLogs = async () => {
-          if (isProcessing) return;
-          isProcessing = true;
+            if (isProcessing) return;
+            isProcessing = true;
+            try {
+                while (t_log.length) {
+                    const batch = t_log.slice(0, telemetry_error ? 1 : MAX_PARALLEL_UPLOADS);
+                    const results = await Promise.allSettled(batch.map(uploadLog));
+                    let processedCount = 0;
 
-          try {
-            while (t_log.length) {
-              const batch = t_log.slice(0, MAX_PARALLEL_UPLOADS); // берём первые 10
-              const results = await Promise.allSettled(batch.map(uploadLog));
-
-              let processedCount = 0;
-
-              for (let i = 0; i < results.length; i++) {
-                const res = results[i];
-                if (res.status === "fulfilled") {
-                  processedCount++;
-                  const isSessionStart = res.value && res.value.isSessionStart;
-                  if (isSessionStart) {
-                    session_start = true;
-                    session_queued = false;
-                    datapoints = 0;
-                    showNotification(localization.key['dash.tel.start']);
-                  } else {
-                    datapoints++;
-                    if (datapoints >= SESS_LIMIT) {
-                      session_start = false;
-                      session = Date.now();
+                    for (const res of results) {
+                        if (res.status === "fulfilled") {
+                            processedCount++;
+                            const isSessionStart = res.value.isSessionStart;
+                            if (isSessionStart) {
+                                session_start = true;
+                                session_queued = false;
+                                datapoints = 0;
+                                showNotification(localization.key['dash.tel.start']);
+                            } else {
+                                datapoints++;
+                                if (datapoints >= SESS_LIMIT) {
+                                    session_start = false;
+                                    session = currentTime;
+                                }
+                            }
+                        } else {
+                            // Ошибка — прерываем, чтобы не терять очередь
+                            telemetry_error = true;
+                            break;
+                        }
                     }
-                  }
-                } else {
-                  // Ошибка — прерываем, чтобы не терять очередь
-                  telemetry_error = true;
-                  break;
+
+                    // Удаляем успешно обработанные логи
+                    if (processedCount > 0) {
+                        t_log.splice(0, processedCount);
+                        if (!idb_empty) deleteFirstNFromDB(processedCount);
+                    }
+
+                    // Если была ошибка — выходим, не продолжаем дальше
+                    if (telemetry_error) break;
+
+                    if (t_log.length > 5) {
+                        $("#tel_popup").textContent = localization.key['dash.tel.queue'] + t_log.length;
+                    }
                 }
-              }
-
-              // Удаляем успешно обработанные логи
-              if (processedCount > 0) {
-                t_log.splice(0, processedCount);
-                deleteFirstNFromDB(processedCount);
-              }
-
-              // Если была ошибка — выходим, не продолжаем дальше
-              if (telemetry_error) break;
-
-              // Обновляем прогресс
-              if (t_log.length > 5) {
-                $("#tel_popup").textContent = localization.key['dash.tel.queue'] + t_log.length;
-              }
+            } finally {
+                isProcessing = false;
             }
-          } finally {
-            isProcessing = false;
-          }
         };
 
         // Управление частотой вызова processLogs
         const currentInterval = telemetry_error ? errorInterval : normalInterval;
-
         if (currentTime - lastProcessTime >= currentInterval) {
             processLogs();
             lastProcessTime = currentTime;
@@ -1829,8 +1832,27 @@ function logs_handler() {
         $("#tel_i").style.color = telemetry_error ? "red" : (t_log.length > 10 ? "darkorange" : "springgreen");
         if (t_log.length <= 1 && !telemetry_error) $("#tel_popup").textContent = localization.key['dash.tel.online'];
     }
-  setTimeout(logs_handler, t_settings[0] === "enabled" ? (session_start ? freq : longOffline ? freq : 2500) : freq);
+
+    // Автосинхронизация очереди в IndexedDB
+    if (currentTime - lastIDBSyncTime >= IDB_SYNC_INTERVAL) {
+        lastIDBSyncTime = currentTime;
+        if (t_log.length > 10 && !isProcessing && !isSavingToDB) {
+            isSavingToDB = true;
+            const toSave = [...t_log];
+            clearLogsFromDB(() => {
+                saveLogsToDB(toSave);
+                isSavingToDB = false;
+            });
+        }
+    }
+
+    // Планирование следующего вызова
+    setTimeout(
+        logs_handler,
+        t_settings[0] === "enabled" ? (session_start ? freq : longOffline ? freq : 2500) : freq
+    );
 }
+
 
 function layoutLoad() {
 	for (let i = 0; i < localStorage.length; i++) {
