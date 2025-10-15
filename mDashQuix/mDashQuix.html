@@ -1286,11 +1286,11 @@ function logs_handler() {
                     if (index < logs.length) {
                         setTimeout(writeNextChunk, 100);
                         $("#tel-norm").style.display = "none";
-                        $("#tel-sync").style.display = "block";
+                        $("#tel-sync").style.display = "inline";
                     } else {
                         idb_empty = false;
                         $("#tel-sync").style.display = "none";
-                        $("#tel-norm").style.display = "block";
+                        $("#tel-norm").style.display = "inline";
                     }
                 };
             });
