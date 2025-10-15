@@ -1458,7 +1458,7 @@ function logs_handler() {
                     (resp) => {
                         if (resp !== "OK!") {
                             telemetry_error = true;
-                            $("#tel_i").textContent = resp;
+                            $("#tel_popup").textContent = resp;
                             reject(new Error("Upload failed: " + resp));
                         } else {
                             telemetry_error = false;
@@ -1468,7 +1468,7 @@ function logs_handler() {
                     },
                     (s, st) => {
                         telemetry_error = true;
-                        $("#tel_i").textContent = s !== 0 ? (!st ? localization.key['dash.tel.err'] : st) : localization.key['dash.tel.unav'];
+                        $("#tel_popup").textContent = s !== 0 ? (!st ? localization.key['dash.tel.err'] : st) : localization.key['dash.tel.unav'];
                         longOffline = true;
                         reject(new Error("Upload error"));
                     },
