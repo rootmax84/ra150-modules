@@ -632,6 +632,7 @@ let telError = '';
 let isProcessing = false; // Защита от параллельной обработки
 let session_queued = false;
 let idb_empty = true;
+let queue_sync = false;
 
 function logs_handler() {
     const currentTime = Date.now();
@@ -678,8 +679,10 @@ function logs_handler() {
                     index += chunkSize;
                     if (index < logs.length) {
                         setTimeout(writeNextChunk, 100);
+                        queue_sync = true;
                     } else {
                         idb_empty = false;
+                        queue_sync = false;
                     }
                 };
             });
@@ -922,7 +925,7 @@ function logs_handler() {
         }
 
 		if (telemetry_error && telError.length > 0) {
-			updateDisplay("tel", "ERROR");
+			updateDisplay("tel", queue_sync ? "SYNC ..." : "ERROR");
 			$('#tel').style.textShadow = '0 0 5px red';
 			$('#tel').style.color = 'red';
 		}
