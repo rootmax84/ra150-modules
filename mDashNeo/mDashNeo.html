@@ -1278,7 +1278,11 @@ function resetSystem() {
         data.currentMax = null;
 
         // Обновляем значение
-        updateDisplay(data.id, '---'); // Используем data.min или 0, если min === null
+		if (data.id === 'tel' && queue_sync) {
+			updateDisplay(data.id, 'SYNC ...');
+		} else {
+			updateDisplay(data.id, '---'); // Используем data.min или 0, если min === null
+		}
 
         // Обновляем отображение только для элементов, у которых есть min и max
         if (index >= 4) { // Только для элементов с индексом >= 4
