@@ -1215,7 +1215,7 @@ function download_log() {
 
 const SESS_LIMIT = 100000;
 const MAX_PARALLEL_UPLOADS = 5;
-const IDB_SYNC_INTERVAL = 59000;
+let IDB_SYNC_INTERVAL = 59000;
 let logsRestored = false;
 let restoringLogs = false;
 let isSavingToDB = false;
@@ -1528,12 +1528,15 @@ function logs_handler() {
     if (currentTime - lastIDBSyncTime >= IDB_SYNC_INTERVAL) {
         lastIDBSyncTime = currentTime;
         if (t_log.length > 10 && !isProcessing && !isSavingToDB) {
+            IDB_SYNC_INTERVAL = 59000;
             isSavingToDB = true;
             const toSave = [...t_log];
             clearLogsFromDB(() => {
                 saveLogsToDB(toSave);
                 isSavingToDB = false;
             });
+        } else {
+            IDB_SYNC_INTERVAL = 3000;
         }
     }
 
