@@ -278,7 +278,7 @@
                 </div> <!-- Закрытие pure-g -->
             </div> <!-- Закрытие content -->
         </div> <!-- Закрытие main -->
-		<footer style="text-align: right;font-size: 10px;opacity: .15;font-family: 'Techno';">v1.04</footer>
+		<footer style="text-align: right;font-size: 10px;opacity: .15;font-family: 'Techno';">v1.05</footer>
     </div> <!-- Закрытие layout -->
 <script>
 'use strict';
@@ -317,7 +317,12 @@ let logger_card_toggle = false;
 
 function updateText(resp) {
     let delay = t_settings[11] || 100;
-	if (resp != null && resp.len > 0 && resp.text.indexOf(">") !== -1 && (resp.text.indexOf("OK") !== -1 || resp.text.indexOf("ERROR") !== -1)) {
+	if (typeof reload_settings === 'boolean' && reload_settings) {
+		ext_cmd_stop = true;
+		reload_settings = false;
+		delay = 1000;
+		return delay;
+	} else if (resp != null && resp.len > 0 && resp.text.indexOf(">") !== -1 && (resp.text.indexOf("OK") !== -1 || resp.text.indexOf("ERROR") !== -1)) {
 		showNotification(localization.key['dash.ext.cmd']); //Skip one message. Can be garbage on first tx/rx cmd after esp boot
 		ext_cmd_stop = true;
 		delay = 4000;
