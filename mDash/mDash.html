@@ -2384,6 +2384,8 @@ let elements = document.getElementsByClassName('gauge__center');
 		cardClass[i].style.borderLeft = "2px solid #333";
 		cardClass[i].style.borderRight = "2px solid #333";
 		cardClass[i].style.borderRadius = "2em";
+		cardClass[i].style.paddingLeft = "14px";
+		cardClass[i].style.paddingRight = "14px";
 		localStorage.setItem("night-md", "1");
 		for (let x in elements) {
 			if (elements.hasOwnProperty(x)) {
@@ -2395,6 +2397,8 @@ let elements = document.getElementsByClassName('gauge__center');
 		cardClass[i].style.borderLeft = "";
 		cardClass[i].style.borderRight = "";
 		cardClass[i].style.borderRadius = "";
+		cardClass[i].style.paddingLeft = "";
+		cardClass[i].style.paddingRight = "";
 		for (let x in elements) {
 			if (elements.hasOwnProperty(x)) {
 				elements[x].className = 'gauge__center light';
@@ -2418,6 +2422,8 @@ let elements = document.getElementsByClassName('gauge__center');
 		cardClass[i].style.borderLeft = "";
 		cardClass[i].style.borderRight = "";
 		cardClass[i].style.borderRadius = "";
+		cardClass[i].style.paddingLeft = "";
+		cardClass[i].style.paddingRight = "";
 		localStorage.setItem("night-md", "0");
 		for (let x in elements) {
 			if (elements.hasOwnProperty(x)) {
@@ -2429,6 +2435,8 @@ let elements = document.getElementsByClassName('gauge__center');
 		cardClass[i].style.borderLeft = "2px solid #333";
 		cardClass[i].style.borderRight = "2px solid #333";
 		cardClass[i].style.borderRadius = "2em";
+		cardClass[i].style.paddingLeft = "14px";
+		cardClass[i].style.paddingRight = "14px";
 		for (let x in elements) {
 			if (elements.hasOwnProperty(x)) {
 				elements[x].className = 'gauge__center night';
@@ -2521,7 +2529,7 @@ function orientationAlert() {
 </tr>
 </table>
 
-<footer style="text-align:right; font-size:10px; opacity:.5;">v2.27</footer>
+<footer style="text-align:right; font-size:10px; opacity:.5;">v2.28</footer>
 </div>
 </div>
 </div>
