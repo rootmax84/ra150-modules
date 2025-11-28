@@ -648,6 +648,8 @@ const cardClass = document.querySelectorAll('.card');
 const tableClass = document.querySelectorAll('td,th');
 let bot = null;
 let warn_sended = false;
+let last_session = Number(localStorage.getItem("last_session_time")) || 0;
+let session_stop = 0; //Stop time in minutes from ESP config
 
 function updateText(resp) {
     let delay = t_settings[11] || 100;
@@ -1081,7 +1083,23 @@ function displayT(data) {
 		localStorage.getItem("log") !== null ? logger = localStorage.getItem("log") : logger_init();
 		if (logger.length >= 5000000) logger_full = true;
 	}
-	if (t_settings[0] === "enabled" || t_settings[13] === "enabled") setTimeout(logs_handler, 1000);
+	
+	if (t_settings[0] === "enabled" || t_settings[13] === "enabled") {
+		session_stop = Number(t_settings?.[7]) || 0;
+		datapoints = session_stop === 0 ? 0 : Number(localStorage.getItem('last_session_datapoints'));
+		setTimeout(() => {
+			let expirationTime = last_session + (session_stop * 60 * 1000);
+			if (session < expirationTime) {
+				localStorage.setItem("last_session_time", last_session);
+				session_start = true;
+				session = last_session;
+			} else {
+				localStorage.setItem("last_session_time", last_session);
+			}
+			logs_handler();
+		}, 5000);
+	}
+	
 	freq = 1000 / t_settings[14]; //Logger frequency
 	if (t_settings[17] === "enabled") bot = new Bot(t_settings[18], t_settings[19]); //TG bot init
 	if (t_settings[25] === "enabled") setInterval(()=>{remoteCMD(10)}, 10000); // enable bot commands
@@ -1161,6 +1179,7 @@ let datapoints = 0;
 let isProcessing = false; // Защита от параллельной обработки
 let session_queued = false;
 let idb_empty = true;
+let session_stop_triggered = false; // Обновляем сессию в оффлайне каждую секунду после истечения таймаута сессии
 
 function logs_handler() {
     const currentTime = Date.now();
@@ -1269,11 +1288,21 @@ function logs_handler() {
                 isSavingToDB = false;
             });
         }
-        session_start = false; // Start new session request
         logsRestored = false;  // Reset the flag to allow restoration later
         restoringLogs = false;
         session_queued = false;
-        session = currentTime; // New session id
+        let expirationTime = last_session + (session_stop * 60 * 1000);
+        if (currentTime > expirationTime || datapoints >= SESS_LIMIT) {
+            session_start = false; // Start new session request
+            session = currentTime; // New session id
+            localStorage.setItem("last_session_time", session);
+            localStorage.setItem("last_session_datapoints", 0);
+            last_session = session;
+            session_stop_triggered = true;
+        }
+        if (session_stop_triggered) {
+            session = currentTime;
+        }
     }
 
     // Онлайн переход (восстановление)
@@ -1294,7 +1323,7 @@ function logs_handler() {
             lastIDBSyncTime = currentTime;
             setTimeout(logs_handler, 1000);
             return;
-        }
+        } else session_stop_triggered = false;
     } catch (e) {
         lastIDBSyncTime = currentTime;
         setTimeout(logs_handler, 1000);
@@ -1342,6 +1371,8 @@ function logs_handler() {
             const start_request = `session=${session}&time=${session}&lang=${lang}&profileName=${t_settings[2] || 'RedManage'}`;
             t_log.push("SESSION_START:" + start_request);
             session_queued = true; // отмечаем, что запрос уже в очереди (но НЕ подтверждён)
+            localStorage.setItem("last_session_time", session);
+            last_session = session;
         }
 
         const request = [
@@ -1462,6 +1493,7 @@ function logs_handler() {
     // Автосинхронизация очереди в IndexedDB
     if (currentTime - lastIDBSyncTime >= IDB_SYNC_INTERVAL) {
         lastIDBSyncTime = currentTime;
+        localStorage.setItem("last_session_datapoints", datapoints);
         if (t_log.length > 10 && !isProcessing && !isSavingToDB) {
             IDB_SYNC_INTERVAL = 59000;
             isSavingToDB = true;
@@ -2096,7 +2128,7 @@ function orientationAlert() {
 </tr>
 </table>
 
-<footer style="text-align:right; font-size:10px; opacity:.5;">v1.47</footer>
+<footer style="text-align:right; font-size:10px; opacity:.5;">v1.50</footer>
 </div>
 </div>
 </div>
