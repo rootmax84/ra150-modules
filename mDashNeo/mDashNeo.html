@@ -1511,6 +1511,30 @@ onLoad(function() {
 	setInterval(function() {
 		resetSystem();
 	}, 1000);
+	
+	//Переключение фильтров/шкал для десктопа
+	let lastUp = 0, lastDown = 0;
+	const LIMIT = 250;
+
+	window.addEventListener('wheel', (e) => {
+		if (e.deltaY < 0 && Date.now() - lastUp >= LIMIT) {
+			toggleFilter();
+			lastUp = Date.now();
+		} else if (e.deltaY > 0 && Date.now() - lastDown >= LIMIT) {
+			toggleBars();
+			lastDown = Date.now();
+		}
+	});
+
+	window.addEventListener('keydown', (e) => {
+		if (e.key === 'ArrowUp' && Date.now() - lastUp >= LIMIT) {
+			toggleFilter();
+			lastUp = Date.now();
+		} else if (e.key === 'ArrowDown' && Date.now() - lastDown >= LIMIT) {
+			toggleBars();
+			lastDown = Date.now();
+		}
+	});
 });
 </script>
 </body>
