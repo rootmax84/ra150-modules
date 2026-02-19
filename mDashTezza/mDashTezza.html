@@ -1415,7 +1415,7 @@ function logs_handler() {
                     gps_speed, odo_dash
                 ].join(" ") + "\n";
                 wr_freq++;
-                if (wr_freq >= t_settings[14] * 10) {
+                if (wr_freq >= map((1000/freq), 1, 20, 10, 200)) {
                     localStorage.setItem("log", logger); //Store log in local storage 5mb limit
                     wr_freq = 0;
                 }
