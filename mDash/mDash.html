@@ -1063,9 +1063,12 @@ function updateText(resp) {
 			$("#val_rpm").textContent = (data[7]);
 			if (data[7] > 6000) {
 				$("#rpm_data").style.backgroundColor = "#c32d2d";
+				RPMBlink.start();
 			} else if (data[7] > 5000) {
 				$("#rpm_data").style.backgroundColor = "#b37a13";
+				RPMBlink.stop();
 			} else {
+				RPMBlink.stop();
 				$("#rpm_data").style.backgroundColor = "#2a8231";
 			}
 			$("#greta").style.top = map(data[7] < 4000 ? 4000 : data[7] > 6000 ? 6000 : data[7], 4000, 6000, 92, 42) + "px";
@@ -2499,6 +2502,33 @@ function orientationAlert() {
 	redDialog.make(dialogOpt);
 }
 
+class RPMBlink {
+  static start() {
+    if (RPMBlink.active) return;
+    RPMBlink.active = true;
+    RPMBlink.el = $('#rpm_data');
+    if (!RPMBlink.el) return;
+    
+    RPMBlink.el.style.opacity = '1';
+    let last = 0;
+    
+    const animate = (t) => {
+      if (!RPMBlink.active) return;
+      if (t - last >= 125) {
+        RPMBlink.el.style.opacity = RPMBlink.el.style.opacity === '1' ? '0' : '1';
+        last = t;
+      }
+      requestAnimationFrame(animate);
+    };
+    requestAnimationFrame(animate);
+  }
+  
+  static stop() {
+    RPMBlink.active = false;
+    if (RPMBlink.el) RPMBlink.el.style.opacity = '1';
+  }
+}
+
  onLoad(function() {
 	dynamicManifest("mDash");
 	if (window.innerHeight > window.innerWidth){
@@ -2561,7 +2591,7 @@ function orientationAlert() {
 </tr>
 </table>
 
-<footer style="text-align:right; font-size:10px; opacity:.5;">v2.30</footer>
+<footer style="text-align:right; font-size:10px; opacity:.5;">v2.31</footer>
 </div>
 </div>
 </div>

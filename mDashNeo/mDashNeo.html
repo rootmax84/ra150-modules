@@ -278,7 +278,7 @@
                 </div> <!-- Закрытие pure-g -->
             </div> <!-- Закрытие content -->
         </div> <!-- Закрытие main -->
-		<footer style="text-align: right;font-size: 10px;opacity: .15;font-family: 'Techno';">v1.10</footer>
+		<footer style="text-align: right;font-size: 10px;opacity: .15;font-family: 'Techno';">v1.11</footer>
     </div> <!-- Закрытие layout -->
 <script>
 'use strict';
@@ -384,6 +384,11 @@ function updateText(resp) {
 
 			//rpm
 			updateDisplay("rpm", data[7]);
+			if (data[7] >= 6000) {
+				RPMBlink.start();
+			} else {
+				RPMBlink.stop();
+			}
 
 			//spd_obd1/gps
 			updateDisplay("spd", gps_failed ? data[6] : gps_speed);
@@ -1270,6 +1275,33 @@ function addDynamicStyles() {
     const styleSheet = document.createElement("style");
     styleSheet.innerText = styles;
     document.head.appendChild(styleSheet);
+}
+
+class RPMBlink {
+  static start() {
+    if (RPMBlink.active) return;
+    RPMBlink.active = true;
+    RPMBlink.el = $('#rpm');
+    if (!RPMBlink.el) return;
+    
+    RPMBlink.el.style.opacity = '1';
+    let last = 0;
+    
+    const animate = (t) => {
+      if (!RPMBlink.active) return;
+      if (t - last >= 125) {
+        RPMBlink.el.style.opacity = RPMBlink.el.style.opacity === '1' ? '0' : '1';
+        last = t;
+      }
+      requestAnimationFrame(animate);
+    };
+    requestAnimationFrame(animate);
+  }
+  
+  static stop() {
+    RPMBlink.active = false;
+    if (RPMBlink.el) RPMBlink.el.style.opacity = '1';
+  }
 }
 
 function updateDisplay(id, value) {

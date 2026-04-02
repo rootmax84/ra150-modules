@@ -353,7 +353,7 @@
 			</div>
 		</div>
 	</div>
-<footer style="text-align: right;font-size: 10px;opacity: .15; font-family: monospace">v1.05</footer>
+<footer style="text-align: right;font-size: 10px;opacity: .15; font-family: monospace">v1.06</footer>
 <script>
 'use strict';
 
@@ -945,6 +945,12 @@ function updateText(resp) {
 			const rpmPercent = Math.min(100, (rpm / rpmMax) * 100);
 			tachFill.style.width = rpmPercent + '%';
 			rpmDisplay.textContent = `${rpm}`;
+
+			if (rpm >= 6000) {
+				RPMBlink.start();
+			} else {
+				RPMBlink.stop();
+			}
 
 			const rpmColor = rpmToColor(rpm);
 			tachFill.style.backgroundColor = rpmColor;
@@ -1764,6 +1770,33 @@ function updateSafe(resp_safe) {
         loaded = true;
 		
     } else readSafe();
+}
+
+class RPMBlink {
+  static start() {
+    if (RPMBlink.active) return;
+    RPMBlink.active = true;
+    RPMBlink.el = document.querySelector('.tach-fill');
+    if (!RPMBlink.el) return;
+    
+    RPMBlink.el.style.opacity = '1';
+    let last = 0;
+    
+    const animate = (t) => {
+      if (!RPMBlink.active) return;
+      if (t - last >= 125) {
+        RPMBlink.el.style.opacity = RPMBlink.el.style.opacity === '1' ? '0' : '1';
+        last = t;
+      }
+      requestAnimationFrame(animate);
+    };
+    requestAnimationFrame(animate);
+  }
+  
+  static stop() {
+    RPMBlink.active = false;
+    if (RPMBlink.el) RPMBlink.el.style.opacity = '1';
+  }
 }
 
 onLoad(function() {
