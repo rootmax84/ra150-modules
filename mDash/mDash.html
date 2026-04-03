@@ -2506,16 +2506,27 @@ class RPMBlink {
   static start() {
     if (RPMBlink.active) return;
     RPMBlink.active = true;
-    RPMBlink.el = $('#rpm_data');
-    if (!RPMBlink.el) return;
     
-    RPMBlink.el.style.opacity = '1';
+    RPMBlink.el = $('#rpm_data');
+    RPMBlink.el2 = $('#val_rpm');
+    
+    if (!RPMBlink.el && !RPMBlink.el2) return;
+    
+    // Устанавливаем начальную прозрачность
+    if (RPMBlink.el) RPMBlink.el.style.opacity = '1';
+    if (RPMBlink.el2) RPMBlink.el2.style.opacity = '1';
+    
     let last = 0;
     
     const animate = (t) => {
       if (!RPMBlink.active) return;
       if (t - last >= 125) {
-        RPMBlink.el.style.opacity = RPMBlink.el.style.opacity === '1' ? '0' : '1';
+        const newOpacity = (RPMBlink.el ? RPMBlink.el.style.opacity : 
+                           (RPMBlink.el2 ? RPMBlink.el2.style.opacity : '1')) === '1' ? '0' : '1';
+        
+        if (RPMBlink.el) RPMBlink.el.style.opacity = newOpacity;
+        if (RPMBlink.el2) RPMBlink.el2.style.opacity = newOpacity;
+        
         last = t;
       }
       requestAnimationFrame(animate);
@@ -2526,6 +2537,7 @@ class RPMBlink {
   static stop() {
     RPMBlink.active = false;
     if (RPMBlink.el) RPMBlink.el.style.opacity = '1';
+    if (RPMBlink.el2) RPMBlink.el2.style.opacity = '1';
   }
 }
 
