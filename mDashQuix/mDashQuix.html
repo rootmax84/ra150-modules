@@ -115,6 +115,7 @@
 	  background: #222;
 	  transform: skewX(-10deg);
 	  height: 30px;
+	  border-radius: 5px;
 	}
 
 	.tach-fill {
@@ -123,14 +124,7 @@
 	  width: 0%;
 	  background-color: green;
 	  transition: width 0.15s linear, background-color 0.3s linear;
-	}
-
-	.tach-peak {
-	  position: absolute;
-	  width: 2px;
-	  height: 33px;
-	  background: #961911;
-	  transition: left .15s linear;
+	  border-radius: 5px;
 	}
 
 	.tach-peak-label {
@@ -299,7 +293,6 @@
 						<div class="tachometer">
 							<div class="tach-bar" id="rpm">
 								<div class="tach-fill" id="tachFill"></div>
-								<div class="tach-peak" id="tachPeak" style="left: 0%"></div>
 								<div class="tach-peak-label" id="tachPeakLabel" style="left: 0%">0</div>
 								<div class="tach-value" id="rpmDisplay">0</div>
 								<!--Indicators-->
@@ -536,7 +529,6 @@ const sensors = [
 
 const rpmMax = 7000;
 const tachFill = document.getElementById('tachFill');
-const tachPeak = document.getElementById('tachPeak');
 const tachPeakLabel = document.getElementById('tachPeakLabel');
 const rpmDisplay = document.getElementById('rpmDisplay');
 
@@ -958,7 +950,6 @@ function updateText(resp) {
 			if (rpm > peakRPM) {
 				peakRPM = rpm;
 				const peakPercent = Math.min(100, (peakRPM / rpmMax) * 100);
-				tachPeak.style.left = `${peakPercent}%`;
 				tachPeakLabel.textContent = peakRPM;
 				tachPeakLabel.style.left = `${peakPercent}%`;
 			}
@@ -1718,7 +1709,6 @@ function resetSystem() {
 	//reset rpm
 	tachFill.style.width = '0%';
 	rpmDisplay.textContent = '0';
-	tachPeak.style.left = '0%';
 	tachPeakLabel.style.left = '0%';
 	tachPeakLabel.textContent = 0;
 	peakRPM = 0;
