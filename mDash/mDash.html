@@ -1955,12 +1955,14 @@ function layoutReset() {
 
 function zoomIn() {
 	zoom < 1 ? zoom += 0.01 : zoom = 1;
+	zoom = Math.round(zoom * 100) / 100;
 	document.querySelector("meta[name=viewport]").setAttribute('content', 'width=device-width,initial-scale=' + zoom);
 	localStorage.setItem('zoom-md', zoom);
 }
 
 function zoomOut() {
 	zoom > 0.4 ? zoom -= 0.01 : zoom = 0.4;
+	zoom = Math.round(zoom * 100) / 100;
 	document.querySelector("meta[name=viewport]").setAttribute('content', 'width=device-width,initial-scale=' + zoom);
 	localStorage.setItem('zoom-md', zoom);
 }

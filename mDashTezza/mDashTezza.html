@@ -1809,12 +1809,14 @@ function resetOdo() {
 
 function zoomIn() {
 	zoom < 2.5 ? zoom += 0.01 : zoom = 2.5;
+	zoom = Math.round(zoom * 100) / 100;
 	$("#main").style.transform = `scale(${zoom})`;
 	localStorage.setItem('zoom-mdt', zoom);
 }
 
 function zoomOut() {
 	zoom > 0.5 ? zoom -= 0.01 : zoom = 0.5;
+	zoom = Math.round(zoom * 100) / 100;
 	$("#main").style.transform = `scale(${zoom})`;
 	localStorage.setItem('zoom-mdt', zoom);
 }
