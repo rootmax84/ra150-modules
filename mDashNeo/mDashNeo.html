@@ -278,7 +278,7 @@
                 </div> <!-- Закрытие pure-g -->
             </div> <!-- Закрытие content -->
         </div> <!-- Закрытие main -->
-		<footer style="text-align: right;font-size: 10px;opacity: .15;font-family: 'Techno';">v1.11</footer>
+		<footer style="text-align: right;font-size: 10px;opacity: .15;font-family: 'Techno';">v1.12</footer>
     </div> <!-- Закрытие layout -->
 <script>
 'use strict';
@@ -847,6 +847,16 @@ function logs_handler() {
     if (t_settings[0] === "enabled" && t_settings[1].length > 0) {
         const normalInterval = freq; // Интервал freq мс
         const errorInterval = 10000; // Интервал 10 сек
+
+        // Проверяем, есть ли реально SESSION_START в очереди
+        const hasCurrentSessionStart = t_log.some(l =>
+            l.startsWith("SESSION_START:") && l.includes(`session=${session}`)
+        );
+
+        // Если флаг говорит "в очереди", а по факту его нет — чиним состояние
+        if (!session_start && session_queued && !hasCurrentSessionStart) {
+            session_queued = false;
+        }
 
         // Если сессия ещё не подтверждена на сервере и ещё не помещена в очередь — ставим её в очередь
         if (!session_start && !session_queued) {

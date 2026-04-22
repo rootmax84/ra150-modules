@@ -1,4 +1,4 @@
-<!doctype html>
+<!DOCTYPE html>
 <html><head>
   <title>...</title>
   <script async src="/theme.js"></script>
@@ -1753,6 +1753,16 @@ function logs_handler() {
         const normalInterval = freq; // Интервал freq мс
         const errorInterval = 10000; // Интервал 10 сек
 
+        // Проверяем, есть ли реально SESSION_START в очереди
+        const hasCurrentSessionStart = t_log.some(l =>
+            l.startsWith("SESSION_START:") && l.includes(`session=${session}`)
+        );
+
+        // Если флаг говорит "в очереди", а по факту его нет — чиним состояние
+        if (!session_start && session_queued && !hasCurrentSessionStart) {
+            session_queued = false;
+        }
+
         // Если сессия ещё не подтверждена на сервере и ещё не помещена в очередь — ставим её в очередь
         if (!session_start && !session_queued) {
             const start_request = `session=${session}&time=${session}&lang=${lang}&profileName=${t_settings[2] || 'RedManage'}`;
@@ -2605,7 +2615,7 @@ class RPMBlink {
 </tr>
 </table>
 
-<footer style="text-align:right; font-size:10px; opacity:.5;">v2.31</footer>
+<footer style="text-align:right; font-size:10px; opacity:.5;">v2.32</footer>
 </div>
 </div>
 </div>
