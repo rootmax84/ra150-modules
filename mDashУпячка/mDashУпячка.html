@@ -1378,12 +1378,8 @@ function logs_handler() {
                     index += chunkSize;
                     if (index < logs.length) {
                         setTimeout(writeNextChunk, 100);
-                        $("#tel-norm").style.display = "none";
-                        $("#tel-sync").style.display = "block";
                     } else {
                         idb_empty = false;
-                        $("#tel-sync").style.display = "none";
-                        $("#tel-norm").style.display = "block";
                     }
                 };
             });
@@ -1471,7 +1467,7 @@ function logs_handler() {
 
     // Проверка условий на выгрузку
     try {
-        if (!loaded || gauges_error || alarm_on || data[35] !== "~" || ext_cmd_stop || !gaugesTested) {
+        if (!loaded || gauges_error || alarm_on || data[35] !== "~" || ext_cmd_stop) {
             lastIDBSyncTime = currentTime;
             setTimeout(logs_handler, 1000);
             return;
