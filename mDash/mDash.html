@@ -2519,13 +2519,13 @@ class RPMBlink {
     if (RPMBlink.active) return;
     RPMBlink.active = true;
     
-    RPMBlink.el = $('#rpm_data');
+    RPMBlink.el = $('#greta');
     RPMBlink.el2 = $('#val_rpm');
     
     if (!RPMBlink.el && !RPMBlink.el2) return;
     
-    // Устанавливаем начальную прозрачность
-    if (RPMBlink.el) RPMBlink.el.style.opacity = '1';
+    // Устанавливаем начальный фильтр
+    if (RPMBlink.el) RPMBlink.el.style.filter = 'none';
     if (RPMBlink.el2) RPMBlink.el2.style.opacity = '1';
     
     let last = 0;
@@ -2533,11 +2533,18 @@ class RPMBlink {
     const animate = (t) => {
       if (!RPMBlink.active) return;
       if (t - last >= 125) {
-        const newOpacity = (RPMBlink.el ? RPMBlink.el.style.opacity : 
-                           (RPMBlink.el2 ? RPMBlink.el2.style.opacity : '1')) === '1' ? '0' : '1';
+        if (RPMBlink.el) {
+          const currentFilter = RPMBlink.el.style.filter;
+          const newFilter = currentFilter === 'none' 
+            ? 'brightness(0) saturate(100%) invert(20%) sepia(100%) saturate(3000%) hue-rotate(340deg)'
+            : 'none';
+          RPMBlink.el.style.filter = newFilter;
+        }
         
-        if (RPMBlink.el) RPMBlink.el.style.opacity = newOpacity;
-        if (RPMBlink.el2) RPMBlink.el2.style.opacity = newOpacity;
+        if (RPMBlink.el2) {
+          const newOpacity = RPMBlink.el2.style.opacity === '1' ? '0' : '1';
+          RPMBlink.el2.style.opacity = newOpacity;
+        }
         
         last = t;
       }
@@ -2548,7 +2555,7 @@ class RPMBlink {
   
   static stop() {
     RPMBlink.active = false;
-    if (RPMBlink.el) RPMBlink.el.style.opacity = '1';
+    if (RPMBlink.el) RPMBlink.el.style.filter = 'none';
     if (RPMBlink.el2) RPMBlink.el2.style.opacity = '1';
   }
 }
