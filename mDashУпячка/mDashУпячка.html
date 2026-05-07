@@ -251,7 +251,6 @@
             border: 4px solid #ff44cc;
             box-shadow: 0 0 30px #ff00aa, 12px 12px 0 #00ffcc33;
             position: relative;
-            animation: chaoticSpin 30s cubic-bezier(0.68, -0.55, 0.27, 1.55) infinite;
         }
         .speed-value {
             font-size: 3.2rem;
@@ -307,7 +306,6 @@
             border-radius: 30px 60px 30px 60px;
             text-align: center;
             border: 2px dashed #ff66ff;
-            animation: shake 0.3s infinite alternate;
         }
         @keyframes shake {
             0% { transform: translate(0px, 0px); }
@@ -1049,7 +1047,10 @@ function updateText(resp) {
 			let boost_calc = ((tmp_map - 101) / 100);
 			setMetric("bst", boost_calc);
 			
-			document.getElementsByClassName('boost-box')[0].style.background = boost_calc >= 0.9 ? `url(${boost_otake})` : '';
+			let el = document.getElementsByClassName('boost-box')[0];
+			let active = boost_calc >= 0.9;
+			el.style.background = active ? `url(${boost_otake})` : '';
+			el.style.animation = active ? 'shake 0.3s infinite alternate' : 'none';
 
 			//rpm
 			setMetric("rpm", data[7]);
@@ -1062,6 +1063,8 @@ function updateText(resp) {
 			//spd_obd1/gps
 			setMetric("spd", gps_failed ? data[6] : gps_speed);
 			curr_spd = gps_failed ? data[6] : gps_speed;
+			
+			document.getElementsByClassName('speed-ring')[0].style.animation = curr_spd > 0 ? 'chaoticSpin 30s cubic-bezier(.68,-.55,.27,1.55) infinite' : 'none';
 			
 			//vlt
 			setMetric("vlt", data[32]);
