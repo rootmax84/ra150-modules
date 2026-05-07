@@ -483,7 +483,7 @@
 			background: linear-gradient(358deg, #83419d, #0f021f);
 			color: #fff;
 			font-family: monospace;
-			font-size: 16px;
+			font-size: 1.5rem;
 			border: 2px dashed #961911;
 			padding: 5px;
 			border-radius: 15px 15px 0 0;
@@ -1049,7 +1049,7 @@ function updateText(resp) {
 			let boost_calc = ((tmp_map - 101) / 100);
 			setMetric("bst", boost_calc);
 			
-			document.getElementsByClassName('boost-box')[0].style.background = boost_calc >= 1 ? `url(${boost_otake})` : '';
+			document.getElementsByClassName('boost-box')[0].style.background = boost_calc >= 0.9 ? `url(${boost_otake})` : '';
 
 			//rpm
 			setMetric("rpm", data[7]);
