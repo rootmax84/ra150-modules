@@ -406,9 +406,10 @@
         }
         .widget-unit {
             font-size: 1.5rem;
-            color: #FFF;
+            color: red;
             text-align: center;
             padding-top: 5px;
+			font-family: monospace;
         }
 
         footer {
@@ -1048,7 +1049,7 @@ function updateText(resp) {
 			setMetric("bst", boost_calc);
 			
 			let el = document.getElementsByClassName('boost-box')[0];
-			let active = boost_calc >= 0.9;
+			let active = boost_calc >= 0.5;
 			el.style.background = active ? `url(${boost_otake})` : '';
 			el.style.animation = active ? 'shake 0.3s infinite alternate' : 'none';
 
