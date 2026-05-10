@@ -1,0 +1,1420 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>...</title>
+  <script async src="/theme.js"></script>
+  <script async src="/h2i.js"></script>
+  <script src="/ui.js"></script>
+  <meta name="viewport" content="width=device-width,initial-scale=0.8">
+  <link rel="icon" href="/logo.avif">
+  <link rel="apple-touch-icon" sizes="256x256" href="/logo.avif">
+    <style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        user-select: none;
+    }
+	
+	#layout.active #menu {
+		left: 150px;
+		width: 150px;
+		box-shadow: 1px 1px 4px 1px rgb(2, 2, 2, 0.2);
+	}
+
+	.card {
+		box-shadow: none;
+		border: 0;
+		border-radius: 2em;
+		background-color: #000000eb;
+		color: #777;
+	}
+
+	.button-primary {
+		box-shadow: none;
+	}
+
+	.pure-table td {
+		transition: 0.2s color linear;
+	}
+
+	.pure-g {
+		transition: all 0.5s linear;
+		word-spacing: normal;
+		height: 100vh;
+	}
+
+	.content {
+		line-height: normal;
+		max-width: fit-content;
+		margin-bottom: 0;
+		height: 100vh;
+	}
+
+	.header,
+	.content {
+		padding-left: 0 !important;
+		padding-right: 0 !important;
+	}
+
+	#layout {
+		position: relative;
+		padding-left: 0;
+		width: 100%;
+		height: 100%;
+	}
+
+	#menu {
+		margin-left: -150px;
+		width: 150px;
+		position: fixed;
+		top: 0;
+		bottom: 0;
+		z-index: 1000;
+		overflow: auto;
+		-webkit-overflow-scrolling: touch;
+		border-radius: 0 0 1em 0;
+		box-shadow: none;
+	}
+
+	.menu-link {
+		position: fixed;
+		display: block;
+		top: 0;
+		left: 0;
+		background: rgba(0, 0, 0, 0.4);
+		font-size: 10px;
+		width: 2em;
+		height: auto;
+		padding: 2.1em 1.6em;
+		border-radius: 0 0 10px;
+		box-sizing: content-box;
+	}
+
+	#layout,
+	#menu,
+		.menu-link {
+		-webkit-transition: left 0.2s;
+		transition: left 0.2s;
+		left: 0;
+	}
+	#menu .pure-menu-heading {
+		border-radius: 0 0 0 10px;
+	}
+	
+    body {
+      background: #000 !important;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      width: 100vw;
+      user-select: none;
+      overflow: hidden;
+    }
+    .dashboard-root {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      align-items: stretch;
+      padding: 2vh 4vw;
+      gap: 2vh;
+	  font-family: 'Courier New', 'OCR A Extended', monospace;
+    }
+
+    /* ТАХОМЕТР */
+    .tachometer-container {
+      position: relative;
+      width: 90%;
+	  margin: 0 auto;
+    }
+    .tach-horizontal {
+      display: flex;
+      gap: 0.3vw;
+      width: 100%;
+    }
+    .tach-hseg {
+      flex: 1;
+      height: 6vh;
+      background: #0d0f08;
+      border: 1px solid #1a1c14;
+      border-radius: 0.2vh;
+      transition: all 0.15s;
+    }
+    .tach-hseg.active-green { background: #22cc22; border-color: #55ee55; box-shadow: 0 0 1vh #33ff3388; }
+    .tach-hseg.active-amber { background: #ee9900; border-color: #ffbb33; box-shadow: 0 0 1vh #ffaa0088; }
+    .tach-hseg.active-red {
+      background: #ee2211;
+      border-color: #ff5544;
+      box-shadow: 0 0 1vh #ff332288;
+      animation: flickerRed 0.3s infinite;
+    }
+    @keyframes flickerRed { 0% { opacity: 1; transform: scale(1.1); } 100% { opacity: 0.65; } }
+	
+	@keyframes alert { 0% { transform: scale(1.5); } 100% { transform: scale(1); } }
+
+    .tach-scale-labels {
+      position: absolute;
+      bottom: -2.6vh;
+      left: 0;
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      font-size: 2vh;
+      color: #887744;
+      letter-spacing: 0.5px;
+      pointer-events: none;
+    }
+
+    /* BOOST · RPM · SPEED */
+    .combined-boost-rpm-speed {
+      display: flex;
+      align-items: baseline;
+      justify-content: center;
+      flex-wrap: wrap;
+      font-weight: bold;
+      color: #33ff33;
+      text-shadow: 0 0 2vh #33ff33aa;
+    }
+    .boost-rpm-speed-value {
+      font-size: 10vmin;
+      letter-spacing: 0.1vw;
+    }
+    .boost-rpm-speed-unit {
+      font-size: 4vmin;
+      color: #669966;
+      margin-left: 0.3vw;
+      letter-spacing: 0.05vw;
+    }
+    .boost-rpm-speed-dot {
+      font-size: 10vmin;
+      margin: 0 0.6vw;
+      color: #669966;
+    }
+
+    /* МЕТРИКИ */
+    .metrics-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 2vw 4vw;
+      align-items: center;
+      justify-content: center;
+    }
+    .metric-vertical {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5vh;
+	  width: 110px;
+    }
+    .metric-label {
+      font-size: 2.5vmin;
+      letter-spacing: 0.15vw;
+      color: #887744;
+      text-transform: uppercase;
+    }
+    .metric-value {
+      font-size: 7vmin;
+      font-weight: bold;
+      color: #33ff33;
+      text-shadow: 0 0 1.5vh #33ff3388;
+      line-height: 1;
+      transition: text-shadow 0.1s ease;
+    }
+    .metric-unit {
+      font-size: 2.2vmin;
+      color: #669966;
+      margin-top: -0.5vh;
+    }
+
+    /* ОДОМЕТР */
+    .odo-group {
+      display: flex;
+      gap: 3vw;
+      align-items: baseline;
+      justify-content: center;
+      font-size: 3.5vmin;
+      color: #55cc55;
+      text-shadow: 0 0 1vh #33ff3377;
+    }
+    .odo-label { color: #887744; font-size: 2.5vmin; }
+    .odo-display, .trip-display, .mhs-display { letter-spacing: 0.1vw; }
+
+    /* ИНДИКАТОРЫ */
+    .indicator-row {
+      display: flex;
+      gap: 5vw;
+      justify-content: center;
+      align-items: center;
+    }
+    .indicator-group {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5vh;
+    }
+    .indicator-light {
+      width: 5vmin;
+      height: 3vmin;
+      border-radius: 0.3vmin;
+      background: #0a0c06;
+      border: 1px solid #1a1c14;
+      transition: 0.2s;
+    }
+    .indicator-light.on { background: #33cc33; box-shadow: 0 0 1.5vh #33ff33; border-color: #55ee55; }
+    .indicator-light.warn { background: #ffaa00; box-shadow: 0 0 1vh #ffaa0066; animation: flickerAmber 0.4s infinite; }
+    .indicator-light.alert { background: #ee2211; box-shadow: 0 0 1.5vh #ff332288; animation: flickerRed 0.3s infinite; }
+    @keyframes flickerAmber { 0% { opacity: 1; } 100% { opacity: 0.8; } }
+    .indicator-label {
+      font-size: 2.5vmin;
+      color: #887744;
+      letter-spacing: 0.05vw;
+    }
+
+    .toyota-badge {
+      font-size: 2vmin;
+      letter-spacing: 0.5vw;
+      color: #5a5a40;
+      text-shadow: 0 0 1vh rgba(100,100,60,0.6);
+      text-align: center;
+    }
+  </style>
+</head>
+<body style="opacity:0">
+    <div class="conn_lost_out" id="conn_layout" style="display:none">
+        <div class="conn_lost_in"></div>
+    </div>
+    <div id="layout">
+        <div id="main">
+            <div id="messages"></div>
+            <div class="cntr ps" id="ps" style="align-items:center; height:100vh; margin:0">
+                <div class="spinner"></div>
+            </div>
+            <div class="content" id="cMenu">
+                <div class="pure-g" id="x" hidden>
+					<div class="dashboard-root" id="dashboardRoot">
+						<div class="tachometer-container">
+							<div class="tach-horizontal" id="tachHorizontal"></div>
+							<div class="tach-scale-labels" id="tachScaleLabels"></div>
+						</div>
+
+						<div class="combined-boost-rpm-speed">
+							<span class="boost-rpm-speed-value" id="boostTopVal">*</span><span class="boost-rpm-speed-unit">bar</span>
+							<span class="boost-rpm-speed-dot">·</span>
+							<span class="boost-rpm-speed-value" id="tachDigital">*</span><span class="boost-rpm-speed-unit">rpm</span>
+							<span class="boost-rpm-speed-dot">·</span>
+							<span class="boost-rpm-speed-value" id="speedValue">*</span><span class="boost-rpm-speed-unit">km/h</span>
+						</div>
+
+						<div class="metrics-row">
+							<div class="metric-vertical"><div class="metric-label">ECT</div><div class="metric-value" id="ectVal">*</div><div class="metric-unit">°C</div></div>
+							<div class="metric-vertical"><div class="metric-label">EOT</div><div class="metric-value" id="eotVal">*</div><div class="metric-unit">°C</div></div>
+							<div class="metric-vertical"><div class="metric-label">IAT</div><div class="metric-value" id="iatVal">*</div><div class="metric-unit">°C</div></div>
+							<div class="metric-vertical"><div class="metric-label">ATF</div><div class="metric-value" id="atfVal">*</div><div class="metric-unit">°C</div></div>
+							<div class="metric-vertical"><div class="metric-label">AAT</div><div class="metric-value" id="aatVal">*</div><div class="metric-unit">°C</div></div>
+							<div class="metric-vertical"><div class="metric-label">EXT</div><div class="metric-value" id="extVal">*</div><div class="metric-unit">°C</div></div>
+							<div class="metric-vertical"><div class="metric-label">EGT</div><div class="metric-value" id="egtVal">*</div><div class="metric-unit">°C</div></div>
+							<div class="metric-vertical"><div class="metric-label">EOP</div><div class="metric-value" id="eopVal">*</div><div class="metric-unit">bar</div></div>
+							<div class="metric-vertical"><div class="metric-label">FLP</div><div class="metric-value" id="flpVal">*</div><div class="metric-unit">bar</div></div>	
+							<div class="metric-vertical"><div class="metric-label">AFR</div><div class="metric-value" id="afrVal">*</div><div class="metric-unit">λ</div></div>
+							<div class="metric-vertical"><div class="metric-label">VLT</div><div class="metric-value" id="vltVal">*</div><div class="metric-unit">V</div></div>
+						</div>
+
+						<div class="odo-group">
+							<span class="odo-label">ODO</span>
+							<span class="odo-display" id="odoDisplay">*</span>
+							<span class="odo-label">TRIP</span>
+							<span class="trip-display" id="tripDisplay">*</span>
+							<span class="odo-label">MHS</span>
+							<span class="mhs-display" id="mhsDisplay">*</span>
+						</div>
+
+						<div class="indicator-row">
+							<div class="indicator-group">
+								<div class="indicator-light" id="indTel"></div>
+								<span class="indicator-label">TEL</span>
+							</div>
+							<div class="indicator-group">
+								<div class="indicator-light" id="indFan"></div>
+								<span class="indicator-label">FAN</span>
+							</div>
+						</div>
+						<div class="toyota-badge">TOY80 · v1.00</div>
+					</div>
+                </div>
+            </div>
+        </div>
+    </div>
+<script>
+'use strict';
+
+  (function() {
+    class Dashboard {
+      constructor() {
+        this.MAX_RPM = 10000;
+        this.TOTAL_TACH_SEGMENTS = 30;
+        this.RPM_PER_SEGMENT = this.MAX_RPM / this.TOTAL_TACH_SEGMENTS;
+        this.GREEN_ZONE_END = 4000;
+        this.AMBER_ZONE_END = 6000;
+
+        this.tachSegments = [];
+        this.tachDigital = document.getElementById('tachDigital');
+        this.speedValue = document.getElementById('speedValue');
+        this.boostTopVal = document.getElementById('boostTopVal');
+        this.buildTachometer();
+
+        // Метрики
+        this.eopVal = document.getElementById('eopVal');
+        this.eotVal = document.getElementById('eotVal');
+        this.iatVal = document.getElementById('iatVal');
+        this.egtVal = document.getElementById('egtVal');
+        this.afrVal = document.getElementById('afrVal');
+        this.vltVal = document.getElementById('vltVal');
+        this.ectVal = document.getElementById('ectVal');
+        this.aatVal = document.getElementById('aatVal');
+        this.atfVal = document.getElementById('atfVal');
+        this.flpVal = document.getElementById('flpVal');
+		this.extVal = document.getElementById('extVal');
+
+        this.odoDisplay = document.getElementById('odoDisplay');
+        this.tripDisplay = document.getElementById('tripDisplay');
+        this.mhsDisplay = document.getElementById('mhsDisplay');
+
+        this.indTel = document.getElementById('indTel');
+        this.indFan = document.getElementById('indFan');
+      }
+
+      buildTachometer() {
+        const container = document.getElementById('tachHorizontal');
+        container.innerHTML = '';
+        this.tachSegments = [];
+        for (let i = 0; i < this.TOTAL_TACH_SEGMENTS; i++) {
+          const seg = document.createElement('div');
+          seg.className = 'tach-hseg';
+          const midRPM = (i + 0.5) * this.RPM_PER_SEGMENT;
+          seg.dataset.zone = midRPM <= this.GREEN_ZONE_END ? 'green' :
+                             (midRPM <= this.AMBER_ZONE_END ? 'amber' : 'red');
+          container.appendChild(seg);
+          this.tachSegments.push(seg);
+        }
+
+        const labelsContainer = document.getElementById('tachScaleLabels');
+        labelsContainer.innerHTML = '';
+        for (let i = 0; i <= 10; i++) {
+          const span = document.createElement('span');
+          span.textContent = i;
+          labelsContainer.appendChild(span);
+        }
+      }
+
+      setRPM(rpm) {
+        const c = Math.max(0, Math.min(this.MAX_RPM, rpm));
+        const active = Math.floor(c / this.RPM_PER_SEGMENT);
+        this.tachSegments.forEach((seg, i) => {
+          seg.className = 'tach-hseg';
+          if (i < active) {
+            const zone = seg.dataset.zone;
+            if (zone === 'green') seg.classList.add('active-green');
+            else if (zone === 'amber') seg.classList.add('active-amber');
+            else seg.classList.add('active-red');
+          }
+        });
+        this.tachDigital.textContent = String(Math.round(c)).padStart(4, '0');
+		if (!gBit(data[33], 15)) {
+			if (c >= this.AMBER_ZONE_END) {
+				this.tachDigital.style.color = '#ff3322';
+				this.tachDigital.style.textShadow = '0 0 2vh #ff3333aa';
+				this.tachDigital.style.animation = 'flickerRed 0.3s infinite';
+			} else if (c >= this.GREEN_ZONE_END) {
+				this.tachDigital.style.color = '#ffaa00';
+				this.tachDigital.style.textShadow = '0 0 2vh #ffd333aa';
+				this.tachDigital.style.animation = 'none';
+			} else {
+				this.tachDigital.style.color = '#33ff33';
+				this.tachDigital.style.textShadow = '0 0 2vh #33ff33aa';
+				this.tachDigital.style.animation = 'none';
+			}
+		}
+      }
+
+      setSpeed(kmh) {
+        const spd = Math.round(Math.min(299, kmh));
+        this.speedValue.textContent = String(spd).padStart(3, '0');
+        this.speedValue.style.color = '#33ff33';
+        this.speedValue.style.textShadow = '0 0 2vh #33ff33aa';
+      }
+
+      setBoost(bar) {
+        this.boostTopVal.textContent = bar < 0 ? '0.0' : bar.toFixed(1);
+        const isHighBoost = bar > 1.0;
+		if (!gBit(data[33], 6) && !gBit(data[33], 9)) {
+			this.boostTopVal.style.color = isHighBoost ? '#ff3322' : '#33ff33';
+			this.boostTopVal.style.textShadow = isHighBoost ? '0 0 2vh #ff3333aa' : '0 0 2vh #33ff33aa';
+		}
+      }
+
+      // --- Общий помощник для установки цвета и тени метрик ---
+      _applyMetricStyle(element, isWarning) {
+        if (isWarning) {
+          element.style.color = '#ff3322';
+          element.style.textShadow = '0 0 2vh #ff3333aa';
+        } else {
+          element.style.color = '#33ff33';
+          element.style.textShadow = '0 0 2vh #33ff33aa';
+        }
+      }
+
+      setEOP(bar) { 
+        this.eopVal.textContent = bar.toFixed(1);
+        if (!gBit(data[33], 2)) this._applyMetricStyle(this.eopVal, bar <= 0.3);
+      }
+      
+      setEOT(c) { 
+        this.eotVal.textContent = Math.round(c);
+        if (!gBit(data[33], 4)) this._applyMetricStyle(this.eotVal, c > 99);
+      }
+      
+      setIAT(c) { 
+        this.iatVal.textContent = Math.round(c);
+        if (!gBit(data[33], 8)) this._applyMetricStyle(this.iatVal, c > 99);
+      }
+      
+      setEGT(c) { 
+        this.egtVal.textContent = Math.round(c);
+        if (!gBit(data[33], 1)) this._applyMetricStyle(this.egtVal, c > 700);
+      }
+      
+      setAFR(afr) { 
+        this.afrVal.textContent = afr.toFixed(1);
+        //this._applyMetricStyle(this.afrVal, (afr < 11 || afr > 18));
+      }
+      
+      setVLT(v) { 
+        this.vltVal.textContent = v.toFixed(1);
+        if (!gBit(data[33], 14)) this._applyMetricStyle(this.vltVal, v < 12.8);
+      }
+      
+      setECT(c) { 
+        this.ectVal.textContent = Math.round(c);
+        if (!gBit(data[33], 5)) this._applyMetricStyle(this.ectVal, c > 99);
+      }
+      
+      setAAT(c) { 
+        this.aatVal.textContent = Math.round(c);
+        if (!gBit(data[33], 12)) this._applyMetricStyle(this.aatVal, c > 99);
+      }
+      
+      setATF(c) { 
+        this.atfVal.textContent = Math.round(c);
+        if (!gBit(data[33], 11)) this._applyMetricStyle(this.atfVal, c > 99);
+      }
+      
+      setFLP(bar) { 
+        this.flpVal.textContent = bar.toFixed(1);
+        //this._applyMetricStyle(this.flpVal, bar < 2);
+      }
+      
+      setEXT(c) { 
+        this.extVal.textContent = Math.round(c);
+        if (!gBit(data[33], 13)) this._applyMetricStyle(this.extVal, c > 99);
+      }
+      
+      setOdometer(km) {
+        this.odoDisplay.textContent = String(Math.floor(km)).padStart(6, '0');
+        this.odoDisplay.style.textShadow = '0 0 1vh #33ff3377';
+      }
+
+      setTrip(km) {
+        this.tripDisplay.textContent = String(Math.floor(km)).padStart(4, '0');
+        this.tripDisplay.style.textShadow = '0 0 1vh #33ff3377';
+      }
+	  
+	  setMhs(h) {
+        this.mhsDisplay.textContent = String(Math.floor(h)).padStart(4, '0');
+        this.mhsDisplay.style.textShadow = '0 0 1vh #33ff3377';
+      }
+
+	  setIndicatorTel(state) {
+		// state может быть: 'on', 'warn', 'alert' или '' / 'off' / false
+		let className = 'indicator-light';
+		if (state === 'on') {
+			className += ' on';
+		} else if (state === 'warn') {
+			className += ' warn';
+		} else if (state === 'alert') {
+			className += ' alert';
+		}
+		// для off / пустой строки / любого другого значения добавляем только базовый класс
+		this.indTel.className = className;
+	  }
+
+      setIndicatorFan(state) {
+		if (!gBit(data[33], 10)) {
+			this.indFan.className = 'indicator-light' + (state ? ' on' : '');
+		} else {
+			this.indFan.className = 'indicator-light' + ' alert';
+		}
+      }
+    }
+
+    window.dash = new Dashboard();
+  })();
+  
+const gBit = (b, bitNumber) => (b >> bitNumber) & 0x01;
+function calculate(number) {
+  const events = [
+    { name: "KNK", needleId: "tachHorizontal" },
+    { name: "EGT", needleId: "extVal" },
+    { name: "EOP", needleId: "eopVal" },
+    { name: "FLP", needleId: "flpVal" },
+    { name: "EOT", needleId: "eotVal" },
+    { name: "ECT", needleId: "ectVal" },
+    { name: "OVB", needleId: "boostTopVal" },
+    { name: "AFR", needleId: "afrVal" },
+    { name: "IAT", needleId: "iatVal" },
+    { name: "MAP", needleId: "boostTopVal" },
+    { name: "FAN", needleId: "indFan" },
+    { name: "ATF", needleId: "atfVal" },
+    { name: "AAT", needleId: "aatVal" },
+    { name: "EXT", needleId: "extVal" },
+    { name: "VLT", needleId: "vltVal" },
+    { name: "RPM", needleId: "tachDigital" },
+  ];
+
+  // Проверяем биты для общего элемента boostTopVal
+  const isOVBError = gBit(number, 6) === 1;  // Индекс 6 (OVB)
+  const isMAPError = gBit(number, 9) === 1;  // Индекс 9 (MAP)
+  const isBoostError = isOVBError || isMAPError;
+
+  events.forEach((sensor, index) => {
+    // Для OVB и MAP обрабатываем общий элемент boostTopVal отдельно
+    if (sensor.name === "OVB" || sensor.name === "MAP") {
+      if (isBoostError) {
+        // Устанавливаем анимацию для общего элемента
+        if (sensor.needleId !== null) {
+		  document.getElementById(`${sensor.needleId}`).style.color = '#ff3322';
+          document.getElementById(`${sensor.needleId}`).style.textShadow = '0 0 2vh #ff3333aa';
+          document.getElementById(`${sensor.needleId}`).style.animation = '0.3s ease 0s infinite normal none running flickerRed';
+        }
+      } else if (sensor.needleId !== null) {
+        // Убираем анимацию, если ни один из битов не установлен
+		document.getElementById(`${sensor.needleId}`).style.color = '';
+        document.getElementById(`${sensor.needleId}`).style.textShadow = '';
+        document.getElementById(`${sensor.needleId}`).style.animation = '';
+      }
+    } else {
+      // Обработка остальных событий
+      if (gBit(number, index) === 1) {
+        if (sensor.needleId !== null) {
+		  document.getElementById(`${sensor.needleId}`).style.color = '#ff3322';
+          document.getElementById(`${sensor.needleId}`).style.textShadow = '0 0 2vh #ff3333aa';
+          document.getElementById(`${sensor.needleId}`).style.animation = '0.3s ease 0s infinite normal none running flickerRed';
+        }
+      } else if (sensor.needleId !== null) {
+		document.getElementById(`${sensor.needleId}`).style.color = '';
+        document.getElementById(`${sensor.needleId}`).style.textShadow = '';
+        document.getElementById(`${sensor.needleId}`).style.animation = '';
+      }
+    }
+  });
+}
+
+let beep = false;
+let a_count = 0;
+let old_rlc;
+let ext_cmd_stop = false; //Stop log by torque command or connect activity
+let data; //MCU data array
+let data_safe; //MCU safe config array
+let safe_ect = 0;
+let safe_eot = 0;
+let safe_atf = 0;
+let session = Date.now();
+let session_start = false;
+const t_settings = [];
+let t_log = [];
+let telemetry_error = true;
+let gps_lat = 0;
+let gps_long = 0;
+let gps_speed = 0;
+let gps_failed = false;
+let logger;
+let freq;
+let clear_rbc = false;
+let l_count = 0;
+let wr_freq = 0; //Write to local storage frequency. 10sec
+let odo_mem;
+let odo_curr = 0;
+let odo_dash = "0.00";
+let odo_trip = "0.00";
+let curr_spd = 0;
+let old_spd = 0;
+let trip_exclude = 0;
+let logger_full = false; //Trigger to stop record to local logger
+let bot = null;
+let warn_sended = false;
+let last_session = Number(localStorage.getItem("last_session_time")) || 0;
+let session_stop = 0; //Stop time in minutes from ESP config
+
+function updateText(resp) {
+    let delay = t_settings[11] || 100;
+	if (typeof reload_settings === 'boolean' && reload_settings) {
+		ext_cmd_stop = true;
+		reload_settings = false;
+		delay = 1000;
+		return delay;
+	} else if (resp != null && resp.len > 0 && resp.text.indexOf(">") !== -1 && (resp.text.indexOf("OK") !== -1 || resp.text.indexOf("ERROR") !== -1)) {
+		showNotification(localization.key['dash.ext.cmd']); //Skip one message. Can be garbage on first tx/rx cmd after esp boot
+		ext_cmd_stop = true;
+		delay = 4000;
+		return delay;
+	} else if (resp != null && resp.len > 0 && resp.text.indexOf("s") !== -1) {
+		delay = 500;
+		return delay;
+	} else ext_cmd_stop = false;
+
+	if (clear_rbc) {
+		if (data[33]) {
+			showWarning(localization.key['dash.clear.err'], 3000);
+			clear_rbc = false;
+		} else {
+			brr(50);
+			set("/rst 1", 0, 1);
+			clear_rbc = false;
+		}
+	}
+
+	if (resp != null && resp.len > 0) {
+		data = resp.text.split(";").slice(1, 37);
+		if (data.length === 36 && data[35] === "~") { //CRC
+			
+			//Watch rollback code
+			calculate(data[33]);
+
+			//Data need to be calculated
+			for (let i = 0; i < data.length - 1; i++) data[i] *= 1; //Convert from string to int/float
+
+			data[0] -= 40; //ECT
+			data[1] -= 40; //EOT
+			data[2] -= 40; //IAT
+			data[3] -= 40; //ATF
+			data[4] -= 40; //AAT
+			data[5] -= 40; //EXT
+			data[9] *= 2; //MAF
+			data[10] = parseInt(map(data[10], 0, 147, 0, 100)); //TPS
+			data[11] = cIGN(data[11]); //IGN
+			data[7] ? data[12] *= 0.125 : data[12] = 0; //INJ time on RPM only
+			data[14] = parseInt((data[14] * 100) / 125); //IAC
+			data[15] /= 100; //AFR
+			data[16] /= 200; //O2S1 Volt
+			data[17] /= 200; //O2S2 Volt
+			data[21] /= 100; //EOP
+			data[22] /= 100; //FP
+
+			//map/boost
+			let tmp_map = data[8];
+			let boost_calc = ((tmp_map - 101) / 100);
+			dash.setBoost(boost_calc);
+
+			//rpm
+			dash.setRPM(data[7]);
+
+			//spd_obd1/gps
+			dash.setSpeed(gps_failed ? data[6] : gps_speed);
+			curr_spd = gps_failed ? data[6] : gps_speed;
+			
+			//vlt
+			dash.setVLT(data[32]);
+
+			//ect
+			dash.setECT(data[0]);
+
+			//eot
+			dash.setEOT(data[1]);
+
+			//iat
+			dash.setIAT(data[2]);
+
+			//atf
+			dash.setATF(data[3]);
+
+			//aat
+			dash.setAAT(data[4]);
+
+			//ext
+			dash.setEXT(data[5]);
+
+			//eop
+			dash.setEOP(data[21]);
+
+			//flp
+			dash.setFLP(data[22]);
+
+			//afr
+			dash.setAFR(data[15]);
+
+			//egt
+			dash.setEGT(data[20]);
+
+			//odo
+			dash.setOdometer(odo_dash);
+			
+			//trip
+			dash.setTrip(odo_trip);
+			
+			//mhs
+			dash.setMhs(parseInt(data[24] / 60));
+			
+			//fan
+			dash.setIndicatorFan(data[26] ? true : false);
+			
+			//rollback
+			if (data[33] > 0) {
+				if (old_rlc != data[33]) {
+					a_count = 0;
+					beep = true;
+				}
+				old_rlc = data[33];
+			} else {
+				if (beep && warn_sended && bot !== null) {
+					if (t_settings[24] === "enabled") {
+						Screenshot('dashboardRoot').then(formData => {
+							return bot.sendPhoto(formData, "🟢 <code>OK</code>", t_settings[19]);
+						});
+					} else {
+						bot.sendMessage("🟢 <code>OK</code>", null, null, false);
+					}
+				  warn_sended = false;
+				}
+				beep = false;
+				a_count = 0;
+				old_rlc = 0;
+			}
+		}
+	}
+	return delay;
+}
+
+function cIGN(a) {
+	let tmp = ((parseInt(a) + 48) / 2 - 64);
+	if (tmp == -40) tmp = 0;
+	return tmp;
+}
+
+function do_beep() {
+	window.setTimeout(do_beep, 3000);
+	if (beep == false) return;
+	a_count < 4 ? a_count++ : a_count = 4;
+	if (a_count < 4) {
+		try {
+			if (a_count == 1 && bot !== null) {
+				const code = calculate(data[33], true);
+				if (t_settings[24] === "enabled") {
+					Screenshot('dashboardRoot').then(formData => {
+						return bot.sendPhoto(formData, `🔴 <code>${code}</code>`, t_settings[19]);
+					});
+				} else {
+					bot.sendMessage(`🔴 <code>${code}</code>`, null, null, false);
+				}
+			  warn_sended = true;
+			}
+			alarm.play();
+		} catch (err) {}
+		brr(250); //Vibrate 250ms. Safari not supported
+	}
+}
+
+let gps_options = {
+	enableHighAccuracy: true,
+	timeout: 30000,
+	maximumAge: 0
+};
+
+function getLocation() {
+	if (navigator.geolocation) {
+		navigator.geolocation.watchPosition(gpsData, function() {
+			gps_failed = true
+		}, gps_options);
+	}
+}
+
+function gpsData(position) {
+	gps_lat = position.coords.latitude;
+	gps_long = position.coords.longitude;
+	gps_speed = Math.trunc(position.coords.speed * 3.6);
+	gps_failed = position.coords.speed == null ? true : false;
+}
+
+function displayT(data) {
+	Object.keys(data).forEach(function(v) {
+		t_settings.push(data[v]);
+	});
+
+	//Init logger/telemetry
+	if (t_settings[13] === "enabled") {
+		localStorage.getItem("log") !== null ? logger = localStorage.getItem("log") : logger_init();
+		if (logger.length >= 5000000) logger_full = true;
+	}
+	
+	if (t_settings[0] === "enabled" || t_settings[13] === "enabled") {
+		session_stop = Number(t_settings?.[7]) || 0;
+		datapoints = session_stop === 0 ? 0 : Number(localStorage.getItem('last_session_datapoints'));
+		setTimeout(() => {
+			let expirationTime = last_session + (session_stop * 60 * 1000);
+			if (session < expirationTime) {
+				localStorage.setItem("last_session_time", last_session);
+				session_start = true;
+				session = last_session;
+			} else {
+				localStorage.setItem("last_session_time", last_session);
+			}
+			logs_handler();
+		}, 5000);
+	}
+	
+	freq = 1000 / t_settings[14]; //Logger frequency
+	if (t_settings[17] === "enabled") bot = new Bot(t_settings[18], t_settings[19]); //TG bot init
+	if (t_settings[25] === "enabled") setInterval(()=>{remoteCMD(10)}, 10000); // enable bot commands
+	parseInt(t_settings?.[26]) ? fetchGaugesWS(250, true) : fetchGauges(250, true); // Protocol. 1 - WebSocket 0 - HTTP Fetch API
+}
+
+function fetchT() {
+	ajaxJson("GET", "/services/info", displayT, function() {
+		window.setTimeout(fetchT, 1000);
+	});
+}
+
+function readSafe() {
+    ajaxSpin('POST', "/console/clear", none, none);
+    ajaxSpin('POST', "/console/send?text=" + encodeURIComponent("/rm") + nr, none, none);
+    fetchSafe(150, false);
+}
+
+function fetchSafe(delay, repeat) {
+    window.setTimeout(function() {
+        ajaxJson('GET', "/console/text",
+            function(resp_safe) {
+                let dly = updateSafe(resp_safe);
+                if (repeat) fetchSafe(dly, repeat);
+                alarm_count = 0;
+            },
+            function() {
+                    setTimeout(function() {
+                        readSafe()
+                    }, 3000);
+            });
+    }, delay);
+}
+
+function updateSafe(resp_safe) {
+
+    if (resp_safe != null && resp_safe.len > 0) {
+        data_safe = resp_safe.text.split(";").slice(1, 406);
+
+        if (data_safe.length !== 405 || data_safe[404] !== "~") {
+            readSafe();
+            return;
+        }
+        loaded = true;
+		
+    } else readSafe();
+}
+
+
+let odoSaveCounter = 0;
+let isOffline = false;
+function initOdometer() {
+  if (gauges_error || alarm_on) { //Если offline ничего не делаем и сохраняем один раз текущее значение odo на всякий случай
+	if (!isOffline) {
+		if (odo_curr > 0) { // записываем только если значение не пустое, может прилететь разовый gauges_error на старте и одометр обнулится
+		    localStorage.setItem('odo', odo_curr);
+		}
+		isOffline = true;
+	}
+	return;
+  } else isOffline = false;
+  if (odo_mem === undefined) {
+    odo_mem = parseFloat(localStorage.getItem('odo')) || 0;
+    if (odo_mem >= 9999999) odo_mem = 0;
+    trip_exclude = odo_mem;
+  }
+
+  if (curr_spd) {
+    // Вычисляем пройденное расстояние за 1 секунду
+    let distance = curr_spd / 3600; // км/ч -> км/с
+    odo_curr = odo_mem + distance;
+
+    if (odo_curr >= 9999999) {
+      odo_curr = 0;
+      odo_mem = 0;
+      trip_exclude = 0;
+    }
+
+    // Увеличиваем счетчик
+    odoSaveCounter++;
+
+    // Сохраняем значение в localStorage каждые 10 секунд
+  if (odoSaveCounter >= 10) {
+    localStorage.setItem('odo', odo_curr);
+    odoSaveCounter = 0;
+  }
+
+    // Обновляем odo_mem для следующей итерации
+    odo_mem = odo_curr;
+  } else {
+    odo_curr = odo_mem;
+  }
+
+  odo_dash = odo_curr.toFixed(2);
+  odo_trip = Math.abs(odo_curr - trip_exclude).toFixed(2);
+}
+
+function logger_init() {
+	localStorage.removeItem("log");
+	logger = "TIME ECT EOT IAT ATF AAT EXT SPD RPM MAP MAF TPS IGN INJ INJD IAC AFR O2S O2S2 EGT EOP FP ERT MHS BSTD FAN GEAR BS1 BS2 PG0 PG1 VLT RLC GLAT GLON GSPD ODO\n";
+	logger_full = false;
+	hideWarning();
+}
+
+const SESS_LIMIT = 100000;
+const MAX_PARALLEL_UPLOADS = 5;
+let IDB_SYNC_INTERVAL = 59000;
+let logsRestored = false;
+let restoringLogs = false;
+let isSavingToDB = false;
+let longOffline = false;
+let lastProcessTime = 0; // Время последнего вызова processLogs
+let lastIDBSyncTime = 0;
+let datapoints = 0;
+let isProcessing = false; // Защита от параллельной обработки
+let session_queued = false;
+let idb_empty = true;
+let session_stop_triggered = false; // Обновляем сессию в оффлайне каждую секунду после истечения таймаута сессии
+let telError = '';
+
+function logs_handler() {
+    const currentTime = Date.now();
+
+    // IndexedDB: инициализация и операции
+    const dbName = 'TelemetryQueueDB';
+    const storeName = 'logs';
+
+    function openDB(callback) {
+        const request = indexedDB.open(dbName, 1);
+
+        request.onupgradeneeded = (event) => {
+            const db = event.target.result;
+            if (!db.objectStoreNames.contains(storeName)) {
+                db.createObjectStore(storeName, { autoIncrement: true });
+            }
+        };
+
+        request.onsuccess = (event) => callback(event.target.result);
+    }
+
+    function clearLogsFromDB(callback) {
+        openDB((db) => {
+            const tx = db.transaction([storeName], 'readwrite');
+            const store = tx.objectStore(storeName);
+            const req = store.clear();
+            req.onsuccess = () => callback && callback();
+        });
+    }
+
+    function saveLogsToDB(logs) {
+        if (!logs || !logs.length) return;
+
+        const chunkSize = 10000;
+        let index = 0;
+
+        function writeNextChunk() {
+            openDB((db) => {
+                const tx = db.transaction([storeName], 'readwrite');
+                const store = tx.objectStore(storeName);
+                const chunk = logs.slice(index, index + chunkSize);
+                chunk.forEach((log) => store.add(log));
+                tx.oncomplete = () => {
+                    index += chunkSize;
+                    if (index < logs.length) {
+                        setTimeout(writeNextChunk, 100);
+                    } else {
+                        idb_empty = false;
+                    }
+                };
+            });
+        }
+
+        writeNextChunk();
+    }
+
+    function getLogsFromDB(callback) {
+        openDB((db) => {
+            const tx = db.transaction([storeName], 'readonly');
+            const store = tx.objectStore(storeName);
+            const logs = [];
+            store.openCursor().onsuccess = (event) => {
+                const cursor = event.target.result;
+                if (cursor) {
+                    logs.push(cursor.value);
+                    cursor.continue();
+                } else {
+                    idb_empty = logs.length === 0;
+                    callback(logs);
+                }
+            };
+        });
+    }
+
+    function deleteFirstNFromDB(n, callback) {
+        if (idb_empty) return callback && callback(0);
+        openDB((db) => {
+            const tx = db.transaction([storeName], 'readwrite');
+            const store = tx.objectStore(storeName);
+            let count = 0;
+            store.openCursor().onsuccess = (event) => {
+                const cursor = event.target.result;
+                if (cursor && count < n) {
+                    store.delete(cursor.primaryKey);
+                    count++;
+                    cursor.continue();
+                } else {
+                    if (callback) callback(count);
+                }
+            };
+        });
+    }
+
+    // Оффлайн переход
+    if (alarm_on) {
+        if (!isSavingToDB && t_log.length > map(freq, 100, 1000, 100, 10)) {
+            isSavingToDB = true;
+            const toSave = [...t_log];
+            t_log = [];
+            clearLogsFromDB(() => {
+                saveLogsToDB(toSave);
+                isSavingToDB = false;
+            });
+        }
+        logsRestored = false;  // Reset the flag to allow restoration later
+        restoringLogs = false;
+        session_queued = false;
+        let expirationTime = last_session + (session_stop * 60 * 1000);
+        if (currentTime > expirationTime || datapoints >= SESS_LIMIT) {
+            session_start = false; // Start new session request
+            session = currentTime; // New session id
+            localStorage.setItem("last_session_time", session);
+            localStorage.setItem("last_session_datapoints", 0);
+            last_session = session;
+            session_stop_triggered = true;
+        }
+        if (session_stop_triggered) {
+            session = currentTime;
+        }
+    }
+
+    // Онлайн переход (восстановление)
+    else if (!logsRestored && !restoringLogs) {
+        restoringLogs = true;
+        getLogsFromDB((logs) => {
+            if (logs.length > 0) {
+                t_log = logs.concat(t_log);
+            }
+            logsRestored = true;
+            restoringLogs = false;
+        });
+    }
+
+    // Проверка условий на выгрузку
+    try {
+        if (!loaded || gauges_error || alarm_on || data[35] !== "~" || ext_cmd_stop) {
+            lastIDBSyncTime = currentTime;
+            setTimeout(logs_handler, 1000);
+            return;
+        } else session_stop_triggered = false;
+    } catch (e) {
+        lastIDBSyncTime = currentTime;
+        setTimeout(logs_handler, 1000);
+        return;
+    }
+
+    // Local storage logs
+    if (t_settings[13] === "enabled") {
+        try {
+            let storage_left = parseInt(map(logger.length, 0, 5000000, 0, 100));
+            if (storage_left < 100) {
+                logger += [
+                    currentTime, data[0], data[1], data[2], data[3], data[4], data[5], data[6],
+                    data[7], data[8], data[9], data[10], data[11], data[12], data[13], data[14],
+                    data[15], data[16], data[17], data[20], data[21], data[22], data[23],
+                    parseInt(data[24] / 60), data[25], data[26], data[27], data[28],
+                    data[29], data[30], data[31], data[32], data[33], gps_lat, gps_long,
+                    gps_speed, odo_dash
+                ].join(" ") + "\n";
+                wr_freq++;
+                if (wr_freq >= map((1000/freq), 1, 20, 10, 200)) {
+                    localStorage.setItem("log", logger); //Store log in local storage 5mb limit
+                    wr_freq = 0;
+                }
+            } else {
+                if (!logger_full) {
+                    localStorage.setItem("log", logger);
+                    logger_full = true;
+                }
+                showWarning(localization.key['dash.logger.full']);
+            }
+        } catch (e) {
+            logger_init();
+        }
+    }
+
+    // Telemetry upload
+    if (t_settings[0] === "enabled" && t_settings[1].length > 0) {
+        const normalInterval = freq; // Интервал freq мс
+        const errorInterval = 10000; // Интервал 10 сек
+
+        // Проверяем, есть ли реально SESSION_START в очереди
+        const hasCurrentSessionStart = t_log.some(l =>
+            l.startsWith("SESSION_START:") && l.includes(`session=${session}`)
+        );
+
+        // Если флаг говорит "в очереди", а по факту его нет — чиним состояние
+        if (!session_start && session_queued && !hasCurrentSessionStart) {
+            session_queued = false;
+        }
+
+        // Если сессия ещё не подтверждена на сервере и ещё не помещена в очередь — ставим её в очередь
+        if (!session_start && !session_queued) {
+            const start_request = `session=${session}&time=${session}&lang=${lang}&profileName=${t_settings[2] || 'RedManage'}`;
+            t_log.push("SESSION_START:" + start_request);
+            session_queued = true; // отмечаем, что запрос уже в очереди (но НЕ подтверждён)
+            localStorage.setItem("last_session_time", session);
+            last_session = session;
+        }
+
+        const request = [
+            "session=", session, "&id=RedManage&time=", currentTime, "&lang=", lang,
+            "&kff1202=", ((data[8] - 101) / 100),
+            "&k5=", data[0], "&k5c=", data[1], "&kf=", data[2],
+            "&kb4=", data[3], "&k46=", data[4], "&k2101=", data[5],
+            "&kd=", data[6], "&kc=", data[7], "&kb=", data[8],
+            "&k10=", data[9], "&k11=", data[10], "&ke=", data[11],
+            "&k2112=", data[12], "&k2100=", data[13], "&k2113=", data[14],
+            "&k21cc=", data[15], "&kff1214=", data[16], "&kff1218=", data[17],
+            "&k78=", data[20], "&k2111=", data[21], "&k2119=", data[22],
+            "&k1f=", data[23], "&k2118=", parseInt(data[24] / 60),
+            "&k2120=", data[25], "&k2122=", data[26], "&k2124=", data[27],
+            "&k21e1=", data[28], "&k21e2=", data[29], "&k2125=", data[30],
+            "&k2126=", data[31], "&kff1238=", data[32], "&k21fa=", data[33],
+            "&kff1006=", gps_lat, "&kff1005=", gps_long, "&kff1001=", gps_speed,
+            "&kff1204=", odo_trip, "&kff120c=", odo_dash
+        ].join("");
+
+        t_log.push(request); // Collect logs in array if connection to telemetry is lost
+
+        // Лимит лога 1млн датапоинтов
+        if (t_log.length > 1000000) {
+          t_log.shift(); // Удаляем старые записи
+        }
+
+        xhr_timeout = t_log.length > 10 ? 60000 : 5000; // Change xhr timeout when we have a queue
+
+        const uploadLog = (log) => {
+            return new Promise((resolve, reject) => {
+                const payload = log.startsWith("SESSION_START:") ? log.replace("SESSION_START:", "") : log;
+                ajaxReq("POST", t_settings[1],
+                    (resp) => {
+                        if (resp !== "OK!") {
+                            telemetry_error = true;
+                            telError = resp;
+                            reject(new Error("Upload failed: " + resp));
+                        } else {
+                            telemetry_error = false;
+							telError = '';
+                            longOffline = false;
+                            resolve({ isSessionStart: log.startsWith("SESSION_START:") });
+                        }
+                    },
+                    (s, st) => {
+                        telemetry_error = true;
+						telError = s !== 0 ? (!st ? localization.key['dash.tel.err'] : st) : localization.key['dash.tel.unav'];
+                        longOffline = true;
+                        reject(new Error("Upload error"));
+                    },
+                    payload,
+                    t_settings[3]
+                );
+            });
+        };
+
+        const processLogs = async () => {
+            if (isProcessing) return;
+            isProcessing = true;
+            try {
+                while (t_log.length) {
+                    const batch = t_log.slice(0, telemetry_error ? 1 : MAX_PARALLEL_UPLOADS);
+                    const results = await Promise.allSettled(batch.map(uploadLog));
+                    let processedCount = 0;
+
+                    for (const res of results) {
+                        if (res.status === "fulfilled") {
+                            processedCount++;
+                            const isSessionStart = res.value.isSessionStart;
+                            if (isSessionStart) {
+                                session_start = true;
+                                session_queued = false;
+                                datapoints = 0;
+                                showNotification(localization.key['dash.tel.start']);
+                            } else {
+                                datapoints++;
+                                if (datapoints >= SESS_LIMIT) {
+                                    session_start = false;
+                                    session = currentTime;
+                                }
+                            }
+                        } else {
+                            // Ошибка — прерываем, чтобы не терять очередь
+                            telemetry_error = true;
+                            break;
+                        }
+                    }
+
+                    // Удаляем успешно обработанные логи
+                    if (processedCount > 0) {
+                        t_log.splice(0, processedCount);
+                        if (!idb_empty) deleteFirstNFromDB(processedCount);
+                    }
+
+                    // Если была ошибка — выходим, не продолжаем дальше
+                    if (telemetry_error) break;
+                }
+            } finally {
+                isProcessing = false;
+            }
+        };
+
+        // Управление частотой вызова processLogs
+        const currentInterval = telemetry_error ? errorInterval : normalInterval;
+        if (currentTime - lastProcessTime >= currentInterval) {
+            processLogs();
+            lastProcessTime = currentTime;
+        }
+    }
+
+	if (telemetry_error && telError.length > 0) {
+		dash.setIndicatorTel('alert');
+	}
+	else {
+		if (t_log.length > 5) {
+			dash.setIndicatorTel('warn');
+		} else if (!session_start) {
+			dash.setIndicatorTel('warn');
+		} else {
+			dash.setIndicatorTel('on');
+		}
+	}
+
+    // Автосинхронизация очереди в IndexedDB
+    if (currentTime - lastIDBSyncTime >= IDB_SYNC_INTERVAL) {
+        lastIDBSyncTime = currentTime;
+        localStorage.setItem("last_session_datapoints", datapoints);
+        if (t_log.length > 10 && !isProcessing && !isSavingToDB) {
+            IDB_SYNC_INTERVAL = 59000;
+            isSavingToDB = true;
+            const toSave = [...t_log];
+            clearLogsFromDB(() => {
+                saveLogsToDB(toSave);
+                isSavingToDB = false;
+            });
+        } else {
+            IDB_SYNC_INTERVAL = 3000;
+        }
+    }
+
+    // Планирование следующего вызова
+    setTimeout(
+        logs_handler,
+        t_settings[0] === "enabled" ? (session_start ? freq : longOffline ? freq : 2500) : freq
+    );
+}
+
+function resetOdo() {
+	let dialogOpt = {
+		btnClassFail: "pure-button button-primary",
+		message: localization.key['dash.odo.reset'],
+		onResolve: function() {
+			brr(50);
+			odo_curr = 0;
+			odo_mem = 0;
+			trip_exclude = 0;
+			localStorage.setItem('odo', '0');
+		}
+	};
+	redDialog.make(dialogOpt);
+}
+
+function mhS() {
+	let dialogOpt = {
+		btnClassFail: "pure-button button-primary",
+		message: localization.key['dash.reset.mh'],
+		onResolve: function() {
+			brr(50);
+			set("/mr", 0, 1);
+		}
+	};
+	redDialog.make(dialogOpt);
+}
+
+function resetGauges() {
+	if (!alarm_on) return;
+	dash.setBoost(0);
+	dash.setRPM(0);
+	dash.setSpeed(0);
+	dash.setVLT(0);
+	dash.setECT(0);
+	dash.setEOT(0);
+	dash.setIAT(0);
+	dash.setATF(0);
+	dash.setAAT(0);
+	dash.setEXT(0);
+	dash.setEOP(0);
+	dash.setFLP(0);
+	dash.setAFR(0);
+	dash.setEGT(0);
+	dash.setOdometer(0);
+	dash.setTrip(0);
+	dash.setMhs(0);
+	dash.setIndicatorFan(false);
+	dash.setIndicatorTel('off');
+	calculate(0);
+}
+
+onLoad(function() {
+	dynamicManifest("mDashToy80");
+	setTimeout(function() {
+		$('title')[0].textContent = "RedManage - mDashToy80";
+	}, 500);
+	fetchT(); //Get telemetry/etc settings
+	do_beep();
+	getLocation();
+	bnd($("#boostTopVal"), "click", function() {
+		brr(50);
+		set("/bsw 3", 0, 1);
+	});
+	bnd($("#odoDisplay"), "click", resetOdo);
+	bnd($("#mhsDisplay"), "click", mhS);
+	bnd($("#indFan"), "click", function() {
+		brr(50);
+		set("/fsw", 0, 1);
+	});
+	bnd($("#indTel"), "click", () => { if (telError.length > 0) showWarning(telError, 4000); });
+	setInterval(function() {
+		resetGauges()
+	}, 1000);
+	readSafe();
+	setInterval(initOdometer, 1000);
+	voiceCMD(".dashboard-root");
+});
+</script>
+</body>
+</html>
