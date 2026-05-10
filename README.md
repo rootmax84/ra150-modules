@@ -15,5 +15,8 @@
 #### mDashQuix
 ![Screenshot_20250406_134900_com_android_chrome_SameTaskWebApkActivity](https://github.com/user-attachments/assets/bd1a5f02-4e20-4413-9224-cca845b7c7e0)
 
+#### mDashToy80
+![Screenshot_20261005_134900_com_android_chrome_SameTaskWebApkActivity](https://github.com/user-attachments/assets/b9155177-5817-42d4-b5b2-aee734e88197)
+
 #### mDashУпячка
 ![Screenshot_20260505_151000_com_android_chrome_SameTaskWebApkActivity](https://github.com/user-attachments/assets/8c73fb12-4647-42d1-8892-15b9229dc76b)
