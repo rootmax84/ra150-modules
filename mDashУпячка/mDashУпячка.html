@@ -1648,10 +1648,10 @@ function logs_handler() {
             processLogs();
             lastProcessTime = currentTime;
         }
+		
+        $("#tel").style.color = telemetry_error ? "red" : (t_log.length > 10 ? "darkorange" : "springgreen");
+        if (t_log.length <= 1 && !telemetry_error) $("#tel").textContent = "СЛИВ ПОКАЗАНИЙ ПЕРДОЛЕТА: РАБОТАЕ!1";
     }
-
-	$("#tel").style.color = telemetry_error ? "red" : (t_log.length > 10 ? "darkorange" : "springgreen");
-	if (t_log.length <= 1 && !telemetry_error) $("#tel").textContent = "СЛИВ ПОКАЗАНИЙ ПЕРДОЛЕТА: РАБОТАЕ!1";
 
     // Автосинхронизация очереди в IndexedDB
     if (currentTime - lastIDBSyncTime >= IDB_SYNC_INTERVAL) {

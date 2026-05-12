@@ -1320,20 +1320,19 @@ function logs_handler() {
             processLogs();
             lastProcessTime = currentTime;
         }
-    }
 
-	if (telemetry_error && telError.length > 0) {
-		dash.setIndicatorTel('alert');
-	}
-	else {
-		if (t_log.length > 5) {
-			dash.setIndicatorTel('warn');
-		} else if (!session_start) {
-			dash.setIndicatorTel('warn');
-		} else {
-			dash.setIndicatorTel('on');
-		}
-	}
+        if (telemetry_error && telError.length > 0) {
+          dash.setIndicatorTel('alert');
+        } else {
+          if (t_log.length > 5) {
+            dash.setIndicatorTel('warn');
+          } else if (!session_start) {
+            dash.setIndicatorTel('warn');
+          } else {
+            dash.setIndicatorTel('on');
+          }
+	   }
+    }
 
     // Автосинхронизация очереди в IndexedDB
     if (currentTime - lastIDBSyncTime >= IDB_SYNC_INTERVAL) {
@@ -1410,7 +1409,45 @@ function resetGauges() {
 	calculate(0);
 }
 
+// Массив с фильтрами
+const filters = [
+  'sepia(1)',
+  'unset',  
+  'saturate(0.5)'
+];
+
+function toggleFilter() {
+  const element = $('#dashboardRoot');
+  if (!element) return;
+
+  let currentIndex = parseInt(localStorage.getItem('toy80-currentFilterIndex'));
+  if (isNaN(currentIndex)) currentIndex = 1;
+
+  currentIndex = (currentIndex + 1) % filters.length;
+
+  localStorage.setItem('toy80-currentFilterIndex', currentIndex.toString());
+  
+  restoreFilter();
+}
+
+function restoreFilter() {
+  const element = $('#dashboardRoot');
+  if (!element) return;
+
+  let currentIndex = parseInt(localStorage.getItem('toy80-currentFilterIndex'));
+  if (isNaN(currentIndex)) currentIndex = 1;
+
+  element.style.filter = filters[currentIndex];
+}
+
+// Переключение фильтров тапом тремя пальцами
+longTap("dashboardRoot", null, 500, null, () => {
+  toggleFilter();	
+  brr(50);
+});
+
 onLoad(function() {
+	restoreFilter();
 	dynamicManifest("mDashToy80");
 	setTimeout(function() {
 		$('title')[0].textContent = "RedManage - mDashToy80";
