@@ -816,59 +816,70 @@
 
     buildDashboard();
 	
-	(function() {
-    // Параметры масштабирования
+(function() {
     const MIN_SCALE = 0.5;
     const MAX_SCALE = 1.0;
     const STORAGE_KEY = 'initial_scale_preference';
 
-    // Получаем текущий масштаб из localStorage или устанавливаем по умолчанию
-    let currentScale = parseFloat(localStorage.getItem(STORAGE_KEY));
-    
-    if (isNaN(currentScale)) {
-        currentScale = 1.0; // значение по умолчанию
-    } else {
-        // Ограничиваем сохраненное значение допустимыми пределами
-        currentScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, currentScale));
-    }
+    // Чувствительность зума: 1 — без изменений, 0.5 — в 2 раза медленнее, 0.2 — очень плавно
+    const SENSITIVITY = 0.5;
 
-    // Применяем масштаб к viewport
+    // Параметры сглаживания (опционально)
+    const SMOOTHING_ENABLED = true;
+    const SMOOTHING_FACTOR = 0.3; // 0..1 — скорость выравнивания (меньше = плавнее)
+
+    let currentScale = parseFloat(localStorage.getItem(STORAGE_KEY));
+    if (isNaN(currentScale)) currentScale = 1.0;
+    currentScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, currentScale));
+
+    let targetScale = currentScale;
+    let animationFrame = null;
+
     function applyScale(scale) {
-        const viewport = document.querySelector('meta[name="viewport"]');
-        
+        let viewport = document.querySelector('meta[name="viewport"]');
         if (!viewport) {
-            // Создаем meta-тег viewport, если его нет
-            const meta = document.createElement('meta');
-            meta.name = 'viewport';
-            document.head.appendChild(meta);
-            updateViewportContent(meta, scale);
-        } else {
-            updateViewportContent(viewport, scale);
+            viewport = document.createElement('meta');
+            viewport.name = 'viewport';
+            document.head.appendChild(viewport);
         }
-        
+        viewport.content = `width=device-width, initial-scale=${scale}, user-scalable=no, maximum-scale=${MAX_SCALE}, minimum-scale=${MIN_SCALE}`;
         currentScale = scale;
         localStorage.setItem(STORAGE_KEY, scale);
     }
 
-    function updateViewportContent(viewport, scale) {
-        viewport.content = `width=device-width, initial-scale=${scale}, user-scalable=no, maximum-scale=${MAX_SCALE}, minimum-scale=${MIN_SCALE}`;
+    function smoothScale() {
+        if (Math.abs(currentScale - targetScale) < 0.001) {
+            applyScale(targetScale);
+            animationFrame = null;
+            return;
+        }
+        currentScale += (targetScale - currentScale) * SMOOTHING_FACTOR;
+        applyScale(currentScale);
+        animationFrame = requestAnimationFrame(smoothScale);
     }
 
-    // Переменные для отслеживания жестов двумя пальцами
+    function setScale(scale) {
+        targetScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, scale));
+        if (SMOOTHING_ENABLED) {
+            if (!animationFrame) {
+                animationFrame = requestAnimationFrame(smoothScale);
+            }
+        } else {
+            applyScale(targetScale);
+        }
+    }
+
+    // Жесты
     let initialDistance = 0;
     let initialScaleValue = currentScale;
     let isTouching = false;
 
-    // Вычисление расстояния между двумя пальцами
     function getDistance(touches) {
-        if (touches.length < 2) return 0;
-        
         const dx = touches[0].clientX - touches[1].clientX;
         const dy = touches[0].clientY - touches[1].clientY;
         return Math.sqrt(dx * dx + dy * dy);
     }
 
-    // Обработка начала касания
     function onTouchStart(e) {
         if (e.touches.length === 2) {
             e.preventDefault();
@@ -878,59 +889,44 @@
         }
     }
 
-    // Обработка движения пальцев
     function onTouchMove(e) {
         if (!isTouching || e.touches.length !== 2) return;
-        
         e.preventDefault();
-        
+
         const newDistance = getDistance(e.touches);
         if (initialDistance === 0) return;
-        
-        // Рассчитываем соотношение изменения расстояния
+
         const ratio = newDistance / initialDistance;
-        
-        // Вычисляем новый масштаб
-        let newScale = initialScaleValue * ratio;
-        
-        // Ограничиваем значения
-        newScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, newScale));
-        
-        // Применяем масштаб в реальном времени
-        applyScale(newScale);
+
+        // Замедляем реакцию: чем меньше SENSITIVITY, тем шире нужен жест
+        const adjustedRatio = Math.pow(ratio, SENSITIVITY);
+        let newScale = initialScaleValue * adjustedRatio;
+
+        setScale(newScale);
     }
 
-    // Завершение жеста
     function onTouchEnd(e) {
         isTouching = false;
         initialDistance = 0;
     }
 
-    // Предотвращаем стандартное масштабирование браузера
     function preventDefaultZoom(e) {
-        if (e.touches.length === 2) {
+        if (e.touches && e.touches.length === 2) {
             e.preventDefault();
         }
     }
 
-    // Применяем сохраненный масштаб при загрузке страницы
     function init() {
-        // Применяем сохраненный масштаб
         applyScale(currentScale);
-        
-        // Добавляем обработчики событий
         document.addEventListener('touchstart', onTouchStart, { passive: false });
         document.addEventListener('touchmove', onTouchMove, { passive: false });
         document.addEventListener('touchend', onTouchEnd);
         document.addEventListener('touchcancel', onTouchEnd);
-        
-        // Дополнительная защита от зума
         document.addEventListener('gesturestart', preventDefaultZoom);
         document.addEventListener('gesturechange', preventDefaultZoom);
         document.addEventListener('gestureend', preventDefaultZoom);
     }
 
-    // Запускаем инициализацию после загрузки DOM
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);
     } else {
