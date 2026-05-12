@@ -126,7 +126,6 @@
       align-items: stretch;
       padding: 2vh 4vw;
       gap: 2vh;
-	  font-family: 'C64';
     }
 
     /* ТАХОМЕТР */
@@ -1409,45 +1408,66 @@ function resetGauges() {
 	calculate(0);
 }
 
-// Массив с фильтрами
-const filters = [
-  'sepia(1)',
-  'unset',  
-  'saturate(0.5)'
-];
+const STYLES = {
+  filters: ['sepia(1)', 'unset', 'saturate(0.5)'],
+  fonts:   ['Courier new', 'C64']
+};
 
-function toggleFilter() {
-  const element = $('#dashboardRoot');
-  if (!element) return;
+class StyleManager {
+  constructor(key) {
+    this.key = key;
+    this.state = this.load();
+  }
 
-  let currentIndex = parseInt(localStorage.getItem('toy80-currentFilterIndex'));
-  if (isNaN(currentIndex)) currentIndex = 1;
+  load() {
+    try {
+      const data = JSON.parse(localStorage.getItem(this.key));
+      return {
+        filter: (data?.filter >= 0 && data.filter < STYLES.filters.length) ? data.filter : 1,
+        font:   (data?.font   >= 0 && data.font   < STYLES.fonts.length)   ? data.font   : 1
+      };
+    } catch {
+      return { filter: 1, font: 1 };
+    }
+  }
 
-  currentIndex = (currentIndex + 1) % filters.length;
+  save() {
+    localStorage.setItem(this.key, JSON.stringify(this.state));
+  }
 
-  localStorage.setItem('toy80-currentFilterIndex', currentIndex.toString());
-  
-  restoreFilter();
+  apply(el) {
+    el.style.filter     = STYLES.filters[this.state.filter];
+    el.style.fontFamily = STYLES.fonts[this.state.font];
+  }
+
+  toggleFilter(el) {
+    this.state.filter = (this.state.filter + 1) % STYLES.filters.length;
+    this.save();
+    this.apply(el);
+  }
+
+  toggleFont(el) {
+    this.state.font = (this.state.font + 1) % STYLES.fonts.length;
+    this.save();
+    this.apply(el);
+  }
 }
 
-function restoreFilter() {
-  const element = $('#dashboardRoot');
-  if (!element) return;
+const manager = new StyleManager('toy80-style');
 
-  let currentIndex = parseInt(localStorage.getItem('toy80-currentFilterIndex'));
-  if (isNaN(currentIndex)) currentIndex = 1;
-
-  element.style.filter = filters[currentIndex];
-}
-
-// Переключение фильтров тапом тремя пальцами
+// Тап тремя пальцами - переключение фильтра
 longTap("dashboardRoot", null, 500, null, () => {
-  toggleFilter();	
-  brr(50);
+    manager.toggleFilter($('#dashboardRoot'));
+    brr(50);
 });
 
+// Долгий тап - переключение шрифта
+longTap("dashboardRoot", () => {
+    manager.toggleFont($('#dashboardRoot'));
+}, 1000);
+
 onLoad(function() {
-	restoreFilter();
+	manager.apply($('#dashboardRoot'));
 	dynamicManifest("mDashToy80");
 	setTimeout(function() {
 		$('title')[0].textContent = "RedManage - mDashToy80";
@@ -1472,6 +1492,29 @@ onLoad(function() {
 	readSafe();
 	setInterval(initOdometer, 1000);
 	voiceCMD(".dashboard-root");
+	
+	let lastUp = 0, lastDown = 0;
+	const LIMIT = 250;
+
+	window.addEventListener('wheel', (e) => {
+		if (e.deltaY < 0 && Date.now() - lastUp >= LIMIT) {
+			manager.toggleFilter($('#dashboardRoot'));
+			lastUp = Date.now();
+		} else if (e.deltaY > 0 && Date.now() - lastDown >= LIMIT) {
+			manager.toggleFont($('#dashboardRoot'));
+			lastDown = Date.now();
+		}
+	});
+
+	window.addEventListener('keydown', (e) => {
+		if (e.key === 'ArrowUp' && Date.now() - lastUp >= LIMIT) {
+			manager.toggleFilter($('#dashboardRoot'));
+			lastUp = Date.now();
+		} else if (e.key === 'ArrowDown' && Date.now() - lastDown >= LIMIT) {
+			manager.toggleFont($('#dashboardRoot'));
+			lastDown = Date.now();
+		}
+	});
 });
 </script>
 </body>
