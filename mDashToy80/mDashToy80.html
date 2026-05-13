@@ -360,6 +360,22 @@
 								<div class="indicator-light" id="indFan"></div>
 								<span class="indicator-label">FAN</span>
 							</div>
+							<div class="indicator-group">
+								<div class="indicator-light" id="indPG0"></div>
+								<span class="indicator-label">PG0</span>
+							</div>
+							<div class="indicator-group">
+								<div class="indicator-light" id="indPG1"></div>
+								<span class="indicator-label">PG1</span>
+							</div>
+							<div class="indicator-group">
+								<div class="indicator-light" id="indBS1"></div>
+								<span class="indicator-label">BS1</span>
+							</div>
+							<div class="indicator-group">
+								<div class="indicator-light" id="indBS2"></div>
+								<span class="indicator-label">BS2</span>
+							</div>
 						</div>
 						<div class="toyota-badge">TOY80 · v1.00</div>
 					</div>
@@ -404,6 +420,10 @@
 
         this.indTel = document.getElementById('indTel');
         this.indFan = document.getElementById('indFan');
+        this.indPG0 = document.getElementById('indPG0');
+        this.indPG1 = document.getElementById('indPG1');
+        this.indBS1 = document.getElementById('indBS1');
+        this.indBS2 = document.getElementById('indBS2');
       }
 
       buildTachometer() {
@@ -413,7 +433,7 @@
         for (let i = 0; i < this.TOTAL_TACH_SEGMENTS; i++) {
           const seg = document.createElement('div');
           seg.className = 'tach-hseg';
-          const midRPM = (i + 0.5) * this.RPM_PER_SEGMENT;
+          const midRPM = (i + 1.5) * this.RPM_PER_SEGMENT;
           seg.dataset.zone = midRPM <= this.GREEN_ZONE_END ? 'green' :
                              (midRPM <= this.AMBER_ZONE_END ? 'amber' : 'red');
           container.appendChild(seg);
@@ -576,6 +596,22 @@
 		} else {
 			this.indFan.className = 'indicator-light' + ' alert';
 		}
+      }
+
+      setIndicatorPG0(state) {
+		this.indPG0.className = 'indicator-light' + (state ? ' on' : '');
+      }
+
+      setIndicatorPG1(state) {
+		this.indPG1.className = 'indicator-light' + (state ? ' on' : '');
+      }
+
+      setIndicatorBS1(state) {
+		this.indBS1.className = 'indicator-light' + (state ? ' on' : '');
+      }
+
+      setIndicatorBS2(state) {
+		this.indBS2.className = 'indicator-light' + (state ? ' on' : '');
       }
     }
 
@@ -788,6 +824,18 @@ function updateText(resp) {
 			
 			//fan
 			dash.setIndicatorFan(data[26] ? true : false);
+			
+			//pg0
+			dash.setIndicatorPG0(data[30] ? true : false);
+
+			//pg1
+			dash.setIndicatorPG1(data[31] ? true : false);
+
+			//bs1
+			dash.setIndicatorBS1(data[28] ? true : false);
+
+			//bs2
+			dash.setIndicatorBS2(data[29] ? true : false);
 			
 			//rollback
 			if (data[33] > 0) {
@@ -1405,6 +1453,10 @@ function resetGauges() {
 	dash.setMhs(0);
 	dash.setIndicatorFan(false);
 	dash.setIndicatorTel('off');
+	dash.setIndicatorPG0(false);
+	dash.setIndicatorPG1(false);
+	dash.setIndicatorBS1(false);
+	dash.setIndicatorBS2(false);
 	calculate(0);
 }
 
@@ -1492,6 +1544,15 @@ onLoad(function() {
 	readSafe();
 	setInterval(initOdometer, 1000);
 	voiceCMD(".dashboard-root");
+	
+	bnd($("#indPG0"), "click", function() {
+		brr(50);
+		set("/x0r 1", 0, 1);
+	});
+	bnd($("#indPG1"), "click", function() {
+		brr(50);
+		set("/x1r 1", 0, 1);
+	});
 	
 	let lastUp = 0, lastDown = 0;
 	const LIMIT = 250;
