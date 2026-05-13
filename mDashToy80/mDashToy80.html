@@ -300,19 +300,6 @@
       text-shadow: 0 0 1vh rgba(100,100,60,0.6);
       text-align: center;
     }
-
-    @media screen and (max-width: 600px) and (orientation: portrait) {
-     .metric-vertical {
-       gap: 1vh;
-       width: 100px;
-     }
-    }
-
-    @media screen and (max-width: 900px) and (orientation: landscape) {
-     .metric-vertical {
-       gap: .5vh;
-       width: 130px;
-     }
    }
   </style>
 </head>
@@ -1532,7 +1519,29 @@ longTap("dashboardRoot", () => {
     manager.toggleFont($('#dashboardRoot'));
 }, 1000);
 
+function addMetricVerticalStyles() {
+  if (!isMobileDev) return;
+  const styleElement = document.createElement('style');
+  styleElement.textContent = `
+    @media screen and (orientation: portrait) {
+      .metric-vertical {
+        gap: 1vh;
+        width: 100px;
+      }
+    }
+
+    @media screen and (orientation: landscape) {
+      .metric-vertical {
+        gap: .5vh;
+        width: 130px;
+      }
+    }
+  `;
+  document.head.appendChild(styleElement);
+}
+
 onLoad(function() {
+	addMetricVerticalStyles();
 	manager.apply($('#dashboardRoot'));
 	dynamicManifest("mDashToy80");
 	setTimeout(function() {
