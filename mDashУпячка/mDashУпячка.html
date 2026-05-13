@@ -543,6 +543,11 @@
 			skewTemp('temp-bar-skew-ect', -40);
 			skewTemp('temp-bar-skew-eot', -40);
 			skewTemp('temp-bar-skew-atf', -40);
+			document.getElementsByClassName('speed-ring')[0].style.animation = 'none';
+			let el = document.getElementsByClassName('boost-box')[0];
+			el.style.background = '';
+			el.style.animation = 'none';
+			RPMBlink.stop();
 		}
 	}
 
