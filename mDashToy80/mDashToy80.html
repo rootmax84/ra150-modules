@@ -282,6 +282,7 @@
       background: #0a0c06;
       border: 1px solid #1a1c14;
       transition: 0.2s;
+      position: relative;
     }
     .indicator-light.on { background: #33cc33; box-shadow: 0 0 1.5vh #33ff33; border-color: #55ee55; }
     .indicator-light.warn { background: #ffaa00; box-shadow: 0 0 1vh #ffaa0066; animation: flickerAmber 0.4s infinite; }
@@ -300,7 +301,40 @@
       text-shadow: 0 0 1vh rgba(100,100,60,0.6);
       text-align: center;
     }
-   }
+
+    #indTel::before {
+      content: attr(data-tooltip);
+      position: absolute;
+      bottom: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #0a0c06;
+      color: #ffaa00;
+      padding: 4px 6px;
+      border-radius: .3vmin;
+      font-size: 2.5vmin;
+      white-space: nowrap;
+      margin-bottom: 6px;
+	  text-shadow: rgba(255, 211, 51, 0.667) 0px 0px 2vh;
+    }
+
+    #indTel::after {
+      content: "";
+      position: absolute;
+      bottom: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 0;
+      height: 0;
+      border: 6px solid transparent;
+      border-top-color: #0a0c06;
+      margin-bottom: -6px;
+    }
+	
+    #indTel.tooltip-hidden::before,
+    #indTel.tooltip-hidden::after {
+      display: none;
+    }
   </style>
 </head>
 <body style="opacity:0">
@@ -354,7 +388,7 @@
 
 						<div class="indicator-row">
 							<div class="indicator-group">
-								<div class="indicator-light" id="indTel"></div>
+								<div class="indicator-light tooltip-hidden" id="indTel"></div>
 								<span class="indicator-label">TEL</span>
 							</div>
 							<div class="indicator-group">
@@ -1380,6 +1414,7 @@ function logs_handler() {
             dash.setIndicatorTel('on');
           }
 	   }
+       updateTooltip((t_log.length > 5 && !telError.length) ? `QUEUE: ${t_log.length}` : '');
     }
 
     // Автосинхронизация очереди в IndexedDB
@@ -1538,6 +1573,20 @@ function addMetricVerticalStyles() {
     }
   `;
   document.head.appendChild(styleElement);
+}
+
+function updateTooltip(text) {
+    const el = document.getElementById('indTel');
+    if (!el) return;
+
+    const content = (text || '').trim();
+
+    if (content) {
+        el.setAttribute('data-tooltip', content);
+        el.classList.remove('tooltip-hidden');
+    } else {
+        el.classList.add('tooltip-hidden');
+    }
 }
 
 onLoad(function() {
