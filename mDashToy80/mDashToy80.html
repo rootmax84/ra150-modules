@@ -673,6 +673,8 @@ function calculate(number) {
     { name: "VLT", needleId: "vltVal" },
     { name: "RPM", needleId: "tachDigital" },
   ];
+  
+  let msg = "";
 
   // Проверяем биты для общего элемента boostTopVal
   const isOVBError = gBit(number, 6) === 1;  // Индекс 6 (OVB)
@@ -680,6 +682,9 @@ function calculate(number) {
   const isBoostError = isOVBError || isMAPError;
 
   events.forEach((sensor, index) => {
+    if (gBit(number, index) === 1) {
+        msg += `${sensor.name} `;
+    }
     // Для OVB и MAP обрабатываем общий элемент boostTopVal отдельно
     if (sensor.name === "OVB" || sensor.name === "MAP") {
       if (isBoostError) {
@@ -710,6 +715,7 @@ function calculate(number) {
       }
     }
   });
+  return msg;
 }
 
 let beep = false;
