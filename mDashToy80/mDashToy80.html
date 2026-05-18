@@ -816,6 +816,7 @@ function updateText(resp) {
 
 			//rpm
 			dash.setRPM(data[7]);
+			flickerBackground(data[7] < 6000 ? false : true);
 
 			//spd_obd1/gps
 			dash.setSpeed(gps_failed ? data[6] : gps_speed);
@@ -1593,6 +1594,28 @@ function updateTooltip(text) {
     } else {
         el.classList.add('tooltip-hidden');
     }
+}
+
+let flickerInterval = null;
+let isBlack = true;
+
+function flickerBackground(enable) {
+  if (enable) {
+
+    if (flickerInterval) return;
+
+    flickerInterval = setInterval(() => {
+      const color = isBlack ? '#961911' : 'black';
+      document.body.style.setProperty('background-color', color, 'important');
+      isBlack = !isBlack;
+    }, 100);
+  } else {
+
+    clearInterval(flickerInterval);
+    flickerInterval = null;
+    isBlack = true;
+    document.body.style.setProperty('background-color', 'black', 'important');
+  }
 }
 
 onLoad(function() {
