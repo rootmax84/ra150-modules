@@ -138,6 +138,7 @@
       display: flex;
       gap: 1vw;
       width: 100%;
+      cursor: pointer;
     }
     .tach-hseg {
       flex: 1;
@@ -334,6 +335,20 @@
     #indTel.tooltip-hidden::before,
     #indTel.tooltip-hidden::after {
       display: none;
+    }
+	
+	.hide-scrollbar {
+	  height: 40vh;
+	  overflow: auto;
+	  scrollbar-width: none;      /* Firefox */
+	}
+
+	.hide-scrollbar::-webkit-scrollbar {
+	  display: none;              /* Chrome, Safari, Opera */
+	}
+	
+    .pure-table td, .pure-table th {
+      padding: 2px 5px;
     }
   </style>
 </head>
@@ -1551,16 +1566,182 @@ class StyleManager {
 
 const manager = new StyleManager('toy80-style');
 
-// Тап тремя пальцами - переключение фильтра
-longTap("dashboardRoot", null, 500, null, () => {
-    manager.toggleFilter($('#dashboardRoot'));
-    brr(50);
-});
+const translations = {
+	'en': {
+		"toy80.settings": "Settings",
+		"toy80.table.sensor": "Sensor",
+		"toy80.table.show": "Show",
+		"toy80.style.font": "Font",
+		"toy80.style.filter": "Filter"
+	},
+	'ru': {
+		"toy80.settings": "Настройки",
+		"toy80.table.sensor": "Сенсор",
+		"toy80.table.show": "Показывать",
+		"toy80.style.font": "Шрифт",
+		"toy80.style.filter": "Фильтр"
 
-// Долгий тап - переключение шрифта
-longTap("dashboardRoot", () => {
-    manager.toggleFont($('#dashboardRoot'));
-}, 1000);
+	},
+	'es': {
+		"toy80.settings": "Ajustes",
+		"toy80.table.sensor": "Sensor",
+		"toy80.table.show": "Mostrar",
+		"toy80.style.font": "Fuente",
+		"toy80.style.filter": "Filtro"
+	}
+};
+
+localization.addMultiLanguageTranslations(translations);
+
+let sensorSettings = JSON.parse(localStorage.getItem("sensorSettings-toy80") || "{}");
+
+// Массив доступных сенсоров/индикаторов для чекбоксов
+const sensors = [
+  { key: 'ect', label: 'ECT' },
+  { key: 'eot', label: 'EOT' },
+  { key: 'iat', label: 'IAT' },
+  { key: 'atf', label: 'ATF' },
+  { key: 'aat', label: 'AAT' },
+  { key: 'ext', label: 'EXT' },
+  { key: 'egt', label: 'EGT' },
+  { key: 'eop', label: 'EOP' },
+  { key: 'flp', label: 'FLP' },
+  { key: 'afr', label: 'AFR' },
+  { key: 'vlt', label: 'VLT' },
+  { key: 'pg0', label: 'PG0' },
+  { key: 'pg1', label: 'PG1' },
+  { key: 'bs1', label: 'BS1' },
+  { key: 'bs2', label: 'BS2' }
+];
+
+function applySensorVisibility() {
+  sensors.forEach(sensor => {
+    const visible = sensorSettings[sensor.key] !== false; // по умолчанию true
+    // ищем контейнер: для метрик это .metric-vertical, для индикаторов .indicator-group
+    let container;
+    if (['pg0','pg1','bs1','bs2'].includes(sensor.key)) {
+      // индикаторы – ищем по id внутри .indicator-group, затем родитель
+      const light = document.getElementById(`ind${sensor.key.toUpperCase()}`);
+      container = light ? light.closest('.indicator-group') : null;
+    } else {
+      // метрики – ищем по id значения, затем родитель .metric-vertical
+      const valueEl = document.getElementById(`${sensor.key}Val`);
+      container = valueEl ? valueEl.closest('.metric-vertical') : null;
+    }
+    if (container) {
+      container.style.display = visible ? '' : 'none';
+    }
+  });
+}
+
+function settingsDialog() {
+  const settingsTableId = 'dialogSettingsTable';
+  const fontSelectId = 'dialogFontSelect';
+  const filterSelectId = 'dialogFilterSelect';
+
+  // Текущие настройки стиля
+  const currentFont = manager.state.font;   // 0 или 1
+  const currentFilter = manager.state.filter; // 0..4
+
+  let tableRows = sensors.map(sensor => {
+    const checked = sensorSettings[sensor.key] !== false ? 'checked' : '';
+    return `<tr>
+              <td>${sensor.label}</td>
+              <td style="text-align:center;">
+                <label class="switch">
+                  <input type="checkbox" data-sensor-key="${sensor.key}" ${checked}>
+                  <span class="slider round"></span>
+                </label>
+              </td>
+            </tr>`;
+  }).join('');
+
+  const html = `
+    <form class="pure-form" style="font-size:12px;color:#777">
+      <div class="hide-scrollbar">
+        <table class="pure-table pure-table-horizontal" style="width:100%;">
+          <thead>
+            <tr>
+              <th align="left">${localization.key['toy80.table.sensor']}</th>
+              <th align="center">${localization.key['toy80.table.show']}</th>
+            </tr>
+          </thead>
+          <tbody id="${settingsTableId}">
+            ${tableRows}
+          </tbody>
+        </table>
+      </div>
+      <legend></legend>
+      <table class="pure-table pure-table-horizontal">
+        <tbody>
+          <tr>
+            <td>${localization.key['toy80.style.font']}</td>
+            <td>
+              <select id="${fontSelectId}">
+                <option value="1" ${currentFont === 1 ? 'selected' : ''}>C64</option>
+                <option value="0" ${currentFont === 0 ? 'selected' : ''}>Courier new</option>
+              </select>
+            </td>
+          </tr>
+          <tr>
+            <td>${localization.key['toy80.style.filter']}</td>
+            <td>
+              <select id="${filterSelectId}">
+                <option value="0" ${currentFilter === 0 ? 'selected' : ''}>1</option>
+                <option value="1" ${currentFilter === 1 ? 'selected' : ''}>2</option>
+                <option value="2" ${currentFilter === 2 ? 'selected' : ''}>3</option>
+                <option value="3" ${currentFilter === 3 ? 'selected' : ''}>4</option>
+                <option value="4" ${currentFilter === 4 ? 'selected' : ''}>5</option>
+              </select>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </form>`;
+
+  const dialogOpt = {
+    title: localization.key['toy80.settings'],
+    btnClassSuccessText: "ОК",
+    btnClassFailText: localization.key['config.reset-button'],
+    btnClassFail: "pure-button button-primary",
+    message: html,
+    onResolve: function () {
+      // 1. Сохраняем видимость сенсоров
+      document.querySelectorAll(`#${settingsTableId} input[type="checkbox"]`).forEach(input => {
+        const key = input.dataset.sensorKey;
+        sensorSettings[key] = input.checked;
+      });
+      localStorage.setItem("sensorSettings-toy80", JSON.stringify(sensorSettings));
+
+      // 2. Сохраняем шрифт и фильтр через StyleManager
+      const fontVal = parseInt(document.getElementById(fontSelectId).value, 10);
+      const filterVal = parseInt(document.getElementById(filterSelectId).value, 10);
+      manager.state.font = fontVal;
+      manager.state.filter = filterVal;
+      manager.save();
+      manager.apply($('#dashboardRoot'));
+
+      // 3. Применяем видимость на приборке
+      applySensorVisibility();
+    },
+    onReject: function () {
+      // Сброс всех настроек до значений по умолчанию
+      localStorage.removeItem("sensorSettings-toy80");
+      sensorSettings = {}; // будет считаться, что все видны
+
+      manager.state = { filter: 1, font: 1 }; // unset, C64
+      manager.save();
+      manager.apply($('#dashboardRoot'));
+
+      applySensorVisibility();
+    }
+  };
+
+  redDialog.make(dialogOpt);
+
+  document.getElementById('redDialogBtnYes').style.fontSize = '12px';
+  document.getElementById('redDialogBtnNo').style.fontSize = '12px';
+}
 
 function addMetricVerticalStyles() {
   if (!isMobileDev) return;
@@ -1620,6 +1801,7 @@ function flickerBackground(enable) {
 }
 
 onLoad(function() {
+	applySensorVisibility();
 	addMetricVerticalStyles();
 	manager.apply($('#dashboardRoot'));
 	dynamicManifest("mDashToy80");
@@ -1629,6 +1811,7 @@ onLoad(function() {
 	fetchT(); //Get telemetry/etc settings
 	do_beep();
 	getLocation();
+	bnd($("#tachHorizontal"), "click", settingsDialog);
 	bnd($("#boostTopVal"), "click", function() {
 		brr(50);
 		set("/bsw 3", 0, 1);
@@ -1654,29 +1837,6 @@ onLoad(function() {
 	bnd($("#indPG1"), "click", function() {
 		brr(50);
 		set("/x1r 1", 0, 1);
-	});
-	
-	let lastUp = 0, lastDown = 0;
-	const LIMIT = 250;
-
-	window.addEventListener('wheel', (e) => {
-		if (e.deltaY < 0 && Date.now() - lastUp >= LIMIT) {
-			manager.toggleFilter($('#dashboardRoot'));
-			lastUp = Date.now();
-		} else if (e.deltaY > 0 && Date.now() - lastDown >= LIMIT) {
-			manager.toggleFont($('#dashboardRoot'));
-			lastDown = Date.now();
-		}
-	});
-
-	window.addEventListener('keydown', (e) => {
-		if (e.key === 'ArrowUp' && Date.now() - lastUp >= LIMIT) {
-			manager.toggleFilter($('#dashboardRoot'));
-			lastUp = Date.now();
-		} else if (e.key === 'ArrowDown' && Date.now() - lastDown >= LIMIT) {
-			manager.toggleFont($('#dashboardRoot'));
-			lastDown = Date.now();
-		}
 	});
 });
 </script>
