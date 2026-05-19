@@ -336,6 +336,46 @@
     #indTel.tooltip-hidden::after {
       display: none;
     }
+
+
+    [data-tooltip].tooltip-visible::before {
+      content: attr(data-tooltip);
+      position: absolute;
+      bottom: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #0a0c06;
+      color: #ffaa00;
+      padding: 4px 6px;
+      border-radius: .3vmin;
+      font-size: 2.5vmin;
+      white-space: nowrap;
+      margin-bottom: 6px;
+      text-shadow: rgba(255, 211, 51, 0.667) 0px 0px 2vh;
+      z-index: 9999;
+      pointer-events: none;
+    }
+
+    [data-tooltip].tooltip-visible::after {
+      content: "";
+      position: absolute;
+      bottom: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 0;
+      height: 0;
+      border: 6px solid transparent;
+      border-top-color: #0a0c06;
+      margin-bottom: -6px;
+      z-index: 9999;
+      pointer-events: none;
+    }
+
+    #boostTopVal, #tachDigital, #speedValue,
+    #ectVal, #eotVal, #iatVal, #atfVal, #aatVal,
+    #extVal, #egtVal, #eopVal, #flpVal, #afrVal, #vltVal {
+      position: relative;
+    }
 	
 	.hide-scrollbar {
 	  height: 40vh;
@@ -444,6 +484,7 @@
         this.RPM_PER_SEGMENT = this.MAX_RPM / this.TOTAL_TACH_SEGMENTS;
         this.GREEN_ZONE_END = 4000;
         this.AMBER_ZONE_END = 6000;
+        this.metricTooltipTimer = null;  // таймер для скрытия тултипа метрики
 
         this.tachSegments = [];
         this.tachDigital = document.getElementById('tachDigital');
@@ -462,7 +503,7 @@
         this.aatVal = document.getElementById('aatVal');
         this.atfVal = document.getElementById('atfVal');
         this.flpVal = document.getElementById('flpVal');
-		this.extVal = document.getElementById('extVal');
+        this.extVal = document.getElementById('extVal');
 
         this.odoDisplay = document.getElementById('odoDisplay');
         this.tripDisplay = document.getElementById('tripDisplay');
@@ -474,6 +515,26 @@
         this.indPG1 = document.getElementById('indPG1');
         this.indBS1 = document.getElementById('indBS1');
         this.indBS2 = document.getElementById('indBS2');
+
+        // Min/Max tracking
+        this.minMax = {};
+        this.currentTooltipEl = null;
+        this.minMaxConfig = {
+          'boostTopVal': {type:'maxOnly'},
+          'tachDigital': {type:'maxOnly'},
+          'speedValue':  {type:'maxOnly'},
+          'ectVal':  {type:'maxOnly'},
+          'eotVal':  {type:'maxOnly'},
+          'iatVal':  {type:'maxOnly'},
+          'atfVal':  {type:'maxOnly'},
+          'aatVal':  {type:'maxOnly'},
+          'extVal':  {type:'maxOnly'},
+          'egtVal':  {type:'maxOnly'},
+          'eopVal':  {type:'minmax'},
+          'flpVal':  {type:'minmax'},
+          'afrVal':  {type:'minmax'},
+          'vltVal':  {type:'minmax'}
+        };
       }
 
       buildTachometer() {
@@ -499,6 +560,78 @@
         }
       }
 
+      // Минимальное/максимальное отслеживание
+      updateMinMax(id, value) {
+        const config = this.minMaxConfig[id];
+        if (!config) return;
+        if (!this.minMax[id]) this.minMax[id] = { min: Infinity, max: -Infinity };
+        const mm = this.minMax[id];
+        if (config.type === 'maxOnly') {
+          if (value > mm.max) mm.max = value;
+        } else {
+          if (value < mm.min) mm.min = value;
+          if (value > mm.max) mm.max = value;
+        }
+      }
+
+      showMetricTooltip(id) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        const mm = this.minMax[id];
+        if (!mm) return;
+
+        // Если уже висит таймер – сбросим
+        if (this.metricTooltipTimer) {
+          clearTimeout(this.metricTooltipTimer);
+          this.metricTooltipTimer = null;
+        }
+
+        let tooltipText = '';
+        if (this.minMaxConfig[id]?.type === 'maxOnly') {
+          tooltipText = mm.max === -Infinity ? 'Max: -' : `Max: ${mm.max}`;
+        } else {
+          const minStr = mm.min === Infinity ? '-' : mm.min;
+          const maxStr = mm.max === -Infinity ? '-' : mm.max;
+          tooltipText = `Min: ${minStr} / Max: ${maxStr}`;
+        }
+
+        // Скрываем предыдущий тултип, если другой
+        if (this.currentTooltipEl && this.currentTooltipEl !== el) {
+          this.hideMetricTooltip(this.currentTooltipEl);
+        }
+
+        el.setAttribute('data-tooltip', tooltipText);
+        el.classList.add('tooltip-visible');
+        this.currentTooltipEl = el;
+
+        // Автоскрытие через 5 секунд
+        this.metricTooltipTimer = setTimeout(() => {
+          this.hideMetricTooltip(el);
+        }, 5000);
+     }
+
+     hideMetricTooltip(el) {
+       if (!el) return;
+       el.removeAttribute('data-tooltip');
+       el.classList.remove('tooltip-visible');
+       if (this.currentTooltipEl === el) this.currentTooltipEl = null;
+       // Очищаем таймер, если тултип скрыт вручную
+       if (this.metricTooltipTimer) {
+         clearTimeout(this.metricTooltipTimer);
+         this.metricTooltipTimer = null;
+       }
+     }
+
+      toggleMetricTooltip(id) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        if (el.classList.contains('tooltip-visible')) {
+          this.hideMetricTooltip(el);
+        } else {
+          this.showMetricTooltip(id);
+        }
+      }
+
       setRPM(rpm) {
         const c = Math.max(0, Math.min(this.MAX_RPM, rpm));
         const active = Math.floor(c / this.RPM_PER_SEGMENT);
@@ -512,21 +645,22 @@
           }
         });
         this.tachDigital.textContent = String(Math.round(c)).padStart(4, '0');
-		if (!gBit(data[33], 15)) {
-			if (c >= this.AMBER_ZONE_END) {
-				this.tachDigital.style.color = '#ff3322';
-				this.tachDigital.style.textShadow = '0 0 2vh #ff3333aa';
-				this.tachDigital.style.animation = 'flickerRed 0.3s infinite';
-			} else if (c >= this.GREEN_ZONE_END) {
-				this.tachDigital.style.color = '#ffaa00';
-				this.tachDigital.style.textShadow = '0 0 2vh #ffd333aa';
-				this.tachDigital.style.animation = 'none';
-			} else {
-				this.tachDigital.style.color = '#33ff33';
-				this.tachDigital.style.textShadow = '0 0 2vh #33ff33aa';
-				this.tachDigital.style.animation = 'none';
-			}
-		}
+        if (!gBit(data[33], 15)) {
+          if (c >= this.AMBER_ZONE_END) {
+            this.tachDigital.style.color = '#ff3322';
+            this.tachDigital.style.textShadow = '0 0 2vh #ff3333aa';
+            this.tachDigital.style.animation = 'flickerRed 0.3s infinite';
+          } else if (c >= this.GREEN_ZONE_END) {
+            this.tachDigital.style.color = '#ffaa00';
+            this.tachDigital.style.textShadow = '0 0 2vh #ffd333aa';
+            this.tachDigital.style.animation = 'none';
+          } else {
+            this.tachDigital.style.color = '#33ff33';
+            this.tachDigital.style.textShadow = '0 0 2vh #33ff33aa';
+            this.tachDigital.style.animation = 'none';
+          }
+        }
+        this.updateMinMax('tachDigital', c);
       }
 
       setSpeed(kmh) {
@@ -534,6 +668,7 @@
         this.speedValue.textContent = String(spd).padStart(3, '0');
         this.speedValue.style.color = '#33ff33';
         this.speedValue.style.textShadow = '0 0 2vh #33ff33aa';
+        this.updateMinMax('speedValue', spd);
       }
 
       setBoost(bar) {
@@ -543,6 +678,7 @@
 			this.boostTopVal.style.color = isHighBoost ? '#ff3322' : '#33ff33';
 			this.boostTopVal.style.textShadow = isHighBoost ? '0 0 2vh #ff3333aa' : '0 0 2vh #33ff33aa';
 		}
+		this.updateMinMax('boostTopVal', bar);
       }
 
       // --- Общий помощник для установки цвета и тени метрик ---
@@ -559,56 +695,65 @@
       setEOP(bar) { 
         this.eopVal.textContent = bar.toFixed(1);
         if (!gBit(data[33], 2)) this._applyMetricStyle(this.eopVal, bar <= 0.3);
+        this.updateMinMax('eopVal', bar);
       }
       
       setEOT(c) { 
         this.eotVal.textContent = Math.round(c);
         if (!gBit(data[33], 4)) this._applyMetricStyle(this.eotVal, c > 99);
+        this.updateMinMax('eotVal', c);
       }
       
       setIAT(c) { 
         this.iatVal.textContent = Math.round(c);
         if (!gBit(data[33], 8)) this._applyMetricStyle(this.iatVal, c > 99);
+        this.updateMinMax('iatVal', c);
       }
       
       setEGT(c) { 
         this.egtVal.textContent = Math.round(c);
         if (!gBit(data[33], 1)) this._applyMetricStyle(this.egtVal, c > 700);
+        this.updateMinMax('egtVal', c);
       }
       
       setAFR(afr) { 
         this.afrVal.textContent = afr.toFixed(1);
-        //this._applyMetricStyle(this.afrVal, (afr < 11 || afr > 18));
+        this.updateMinMax('afrVal', afr);
       }
       
       setVLT(v) { 
         this.vltVal.textContent = v.toFixed(1);
         if (!gBit(data[33], 14)) this._applyMetricStyle(this.vltVal, v < 12.8);
+        this.updateMinMax('vltVal', v);
       }
       
       setECT(c) { 
         this.ectVal.textContent = Math.round(c);
         if (!gBit(data[33], 5)) this._applyMetricStyle(this.ectVal, c > 99);
+        this.updateMinMax('ectVal', c);
       }
       
       setAAT(c) { 
         this.aatVal.textContent = Math.round(c);
         if (!gBit(data[33], 12)) this._applyMetricStyle(this.aatVal, c > 99);
+        this.updateMinMax('aatVal', c);
       }
       
       setATF(c) { 
         this.atfVal.textContent = Math.round(c);
         if (!gBit(data[33], 11)) this._applyMetricStyle(this.atfVal, c > 99);
+        this.updateMinMax('atfVal', c);
       }
       
       setFLP(bar) { 
         this.flpVal.textContent = bar.toFixed(1);
-        //this._applyMetricStyle(this.flpVal, bar < 2);
+        this.updateMinMax('flpVal', bar);
       }
       
       setEXT(c) { 
         this.extVal.textContent = Math.round(c);
         if (!gBit(data[33], 13)) this._applyMetricStyle(this.extVal, c > 99);
+        this.updateMinMax('extVal', c);
       }
       
       setOdometer(km) {
@@ -1580,7 +1725,6 @@ const translations = {
 		"toy80.table.show": "Показывать",
 		"toy80.style.font": "Шрифт",
 		"toy80.style.filter": "Фильтр"
-
 	},
 	'es': {
 		"toy80.settings": "Ajustes",
@@ -1837,6 +1981,18 @@ onLoad(function() {
 	bnd($("#indPG1"), "click", function() {
 		brr(50);
 		set("/x1r 1", 0, 1);
+	});
+
+	// Обработчики для показа тултипов метрик
+	const metricIds = ['ectVal','eotVal','iatVal','atfVal','aatVal','extVal','egtVal','eopVal','flpVal','afrVal','vltVal','tachDigital','speedValue','boostTopVal'];
+	metricIds.forEach(function(id) {
+		const el = document.getElementById(id);
+		if (el) {
+			bnd(el, "click", function(e) {
+				e.stopPropagation();
+				if (window.dash) window.dash.toggleMetricTooltip(this.id);
+			});
+		}
 	});
 });
 </script>
