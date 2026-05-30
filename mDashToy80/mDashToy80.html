@@ -1957,10 +1957,10 @@ onLoad(function() {
 	do_beep();
 	getLocation();
 	bnd($("#tachHorizontal"), "click", settingsDialog);
-	bnd($("#boostTopVal"), "click", function() {
+	longTap("boostTopVal", function() { 
 		brr(50);
 		set("/bsw 3", 0, 1);
-	});
+	},1000);
 	bnd($("#odoDisplay"), "click", resetOdo);
 	bnd($("#mhsDisplay"), "click", mhS);
 	bnd($("#indFan"), "click", function() {
