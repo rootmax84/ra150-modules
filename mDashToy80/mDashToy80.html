@@ -467,7 +467,7 @@
 								<span class="indicator-label">BS2</span>
 							</div>
 						</div>
-						<div class="toyota-badge">TOY80 · v1.00</div>
+						<div class="toyota-badge">TOY80 · v1.01 · <span id="runtime">00:00:00</span></div>
 					</div>
                 </div>
             </div>
@@ -566,6 +566,11 @@
         if (!config) return;
         if (!this.minMax[id]) this.minMax[id] = { min: Infinity, max: -Infinity };
         const mm = this.minMax[id];
+		if (!value || value === -40) {
+          mm.min = Infinity;
+          mm.max = -Infinity;
+          return;
+        }
         if (config.type === 'maxOnly') {
           if (value > mm.max) mm.max = value;
         } else {
@@ -1038,6 +1043,9 @@ function updateText(resp) {
 
 			//bs2
 			dash.setIndicatorBS2(data[29] ? true : false);
+			
+			//runtime
+			$('#runtime').textContent = `${String(parseInt((data[23] / 60) / 60)).padStart(2, '0')}:${String(parseInt((data[23] / 60) % 60)).padStart(2, '0')}:${String(data[23] % 60).padStart(2, '0')}`;
 			
 			//rollback
 			if (data[33] > 0) {
@@ -1663,6 +1671,7 @@ function resetGauges() {
 	calculate(0);
 	flickerBackground(false);
 	updateTooltip('');
+	$('runtime').textContent = '00:00:00';
 }
 
 const STYLES = {
