@@ -1564,7 +1564,6 @@ let lastProcessTime = 0; // Время последнего вызова process
 let lastIDBSyncTime = 0;
 let datapoints = 0;
 let isProcessing = false; // Защита от параллельной обработки
-let session_queued = false;
 let idb_empty = true;
 let session_stop_triggered = false; // Обновляем сессию в оффлайне каждую секунду после истечения таймаута сессии
 
@@ -1677,7 +1676,6 @@ function logs_handler() {
         }
         logsRestored = false;  // Reset the flag to allow restoration later
         restoringLogs = false;
-        session_queued = false;
         let expirationTime = last_session + (session_stop * 60 * 1000);
         if (currentTime > expirationTime || datapoints >= SESS_LIMIT) {
             session_start = false; // Start new session request
@@ -1753,23 +1751,17 @@ function logs_handler() {
         const normalInterval = freq; // Интервал freq мс
         const errorInterval = 10000; // Интервал 10 сек
 
-        // Проверяем, есть ли реально SESSION_START в очереди
-        const hasCurrentSessionStart = t_log.some(l =>
-            l.startsWith("SESSION_START:") && l.includes(`session=${session}`)
-        );
-
-        // Если флаг говорит "в очереди", а по факту его нет — чиним состояние
-        if (!session_start && session_queued && !hasCurrentSessionStart) {
-            session_queued = false;
-        }
-
-        // Если сессия ещё не подтверждена на сервере и ещё не помещена в очередь — ставим её в очередь
-        if (!session_start && !session_queued) {
-            const start_request = `session=${session}&time=${session}&lang=${lang}&profileName=${t_settings[2] || 'RedManage'}`;
-            t_log.push("SESSION_START:" + start_request);
-            session_queued = true; // отмечаем, что запрос уже в очереди (но НЕ подтверждён)
-            localStorage.setItem("last_session_time", session);
-            last_session = session;
+        // Добавляем SESSION_START только когда восстановление гарантированно завершено
+        if (logsRestored && !restoringLogs) {
+            const hasStartInQueue = t_log.some(l =>
+                l.startsWith("SESSION_START:") && l.includes(`session=${session}`)
+            );
+            if (!session_start && !hasStartInQueue) {
+                const start_request = `session=${session}&time=${session}&lang=${lang}&profileName=${t_settings[2] || 'RedManage'}`;
+                t_log.push("SESSION_START:" + start_request);
+                localStorage.setItem("last_session_time", session);
+                last_session = session;
+            }
         }
 
         const request = [
@@ -1841,7 +1833,6 @@ function logs_handler() {
                             const isSessionStart = res.value.isSessionStart;
                             if (isSessionStart) {
                                 session_start = true;
-                                session_queued = false;
                                 datapoints = 0;
                                 showNotification(localization.key['dash.tel.start']);
                             } else {
@@ -2624,7 +2615,7 @@ class RPMBlink {
 </tr>
 </table>
 
-<footer style="text-align:right; font-size:10px; opacity:.5;">v2.32</footer>
+<footer style="text-align:right; font-size:10px; opacity:.5;">v2.35</footer>
 </div>
 </div>
 </div>
