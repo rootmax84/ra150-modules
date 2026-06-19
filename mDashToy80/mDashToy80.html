@@ -390,6 +390,15 @@
     .pure-table td, .pure-table th {
       padding: 2px 5px;
     }
+	
+	#indFan-pwm {
+ 	  position: absolute;
+	  top: 50%;
+	  left: 50%;
+	  transform: translate(-50%, -50%);
+	  color: green;
+	  -webkit-text-stroke: .5px #00000070;
+	}
   </style>
 </head>
 <body style="opacity:0">
@@ -447,7 +456,7 @@
 								<span class="indicator-label">TEL</span>
 							</div>
 							<div class="indicator-group">
-								<div class="indicator-light" id="indFan"></div>
+								<div class="indicator-light" id="indFan"><span id="indFan-pwm"></span></div>
 								<span class="indicator-label">FAN</span>
 							</div>
 							<div class="indicator-group">
@@ -1030,6 +1039,7 @@ function updateText(resp) {
 			dash.setMhs(parseInt(data[24] / 60));
 			
 			//fan
+			$("#indFan-pwm").textContent = data[26] > 1 ? data[26] : '';
 			dash.setIndicatorFan(data[26] ? true : false);
 			
 			//pg0
@@ -1662,7 +1672,8 @@ function resetGauges() {
 	calculate(0);
 	flickerBackground(false);
 	updateTooltip('');
-	$('runtime').textContent = '00:00:00';
+	$('#runtime').textContent = '00:00:00';
+	$("#indFan-pwm").textContent = '';
 }
 
 const STYLES = {
