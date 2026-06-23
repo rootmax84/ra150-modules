@@ -1470,6 +1470,24 @@ function logs_handler() {
                 t_log.push("SESSION_START:" + start_request);
                 localStorage.setItem("last_session_time", session);
                 last_session = session;
+
+                // === НЕМЕДЛЕННАЯ СИНХРОНИЗАЦИЯ В INDEXEDDB ===
+                // Если в данный момент нет активного сохранения, запускаем принудительное
+                if (!isSavingToDB) {
+                    // Планируем сохранение в следующем микротаске, чтобы текущий вызов logs_handler завершился
+                    setTimeout(() => {
+                        if (!isSavingToDB && t_log.length > 0) {
+                            isSavingToDB = true;
+                            const toSave = [...t_log];
+                            clearLogsFromDB(() => {
+                                saveLogsToDB(toSave);
+                                isSavingToDB = false;
+                            });
+                        }
+                    }, 0);
+                }
+                // Сбрасываем время последней IDB-синхронизации, чтобы обычный цикл не дублировал операцию сразу
+                lastIDBSyncTime = currentTime;
             }
         }
 
