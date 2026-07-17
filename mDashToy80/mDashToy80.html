@@ -477,7 +477,7 @@
 								<span class="indicator-label">BS2</span>
 							</div>
 						</div>
-						<div class="toyota-badge">TOY80 · v1.02 · <span id="runtime">00:00:00</span></div>
+						<div class="toyota-badge">TOY80 · v1.03 · <span id="runtime">00:00:00</span></div>
 					</div>
                 </div>
             </div>
@@ -576,7 +576,7 @@
         if (!config) return;
         if (!this.minMax[id]) this.minMax[id] = { min: Infinity, max: -Infinity };
         const mm = this.minMax[id];
-		if (!value || value === -40) {
+		if (value === null || value === undefined || value === -40) {
           mm.min = Infinity;
           mm.max = -Infinity;
           return;
@@ -688,12 +688,13 @@
 
       setBoost(bar) {
         this.boostTopVal.textContent = bar < 0 ? '0.0' : bar.toFixed(1);
+        const boostForStats = bar < 0 ? 0 : bar;
         const isHighBoost = bar > 1.0;
 		if (!gBit(data[33], 6) && !gBit(data[33], 9)) {
 			this.boostTopVal.style.color = isHighBoost ? '#ff3322' : '#33ff33';
 			this.boostTopVal.style.textShadow = isHighBoost ? '0 0 2vh #ff3333aa' : '0 0 2vh #33ff33aa';
 		}
-		this.updateMinMax('boostTopVal', bar);
+        this.updateMinMax('boostTopVal', boostForStats);
       }
 
       // --- Общий помощник для установки цвета и тени метрик ---
