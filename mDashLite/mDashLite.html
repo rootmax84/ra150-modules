@@ -626,10 +626,6 @@ let session_start = false;
 const t_settings = [];
 let t_log = [];
 let telemetry_error = true;
-let gps_lat = 0;
-let gps_long = 0;
-let gps_speed = 0;
-let gps_failed = false;
 let logger;
 let freq;
 let zoom = localStorage.getItem("zoom-mdl") === null ? 0.8 : parseFloat(localStorage.getItem("zoom-mdl"));
@@ -749,11 +745,11 @@ function updateText(resp) {
 			$("#rpm_min").textContent = rpm_min;
 			$("#rpm_max").textContent = rpm_max;
 			//spd_obd1/gps
-			$("#spd_switch").textContent = gps_failed ? "OBD1" : "GPS";
-			$("#val_spd_obd").textContent = gps_failed ? data[6] : gps_speed;
-			curr_spd = gps_failed ? data[6] : gps_speed;
-			if (spd_max <= (gps_failed ? data[6] : gps_speed)) {
-				spd_max = gps_failed ? data[6] : gps_speed;
+			$("#spd_switch").textContent = GPS.failed ? "OBD1" : "GPS";
+			$("#val_spd_obd").textContent = GPS.failed ? data[6] : GPS.speed;
+			curr_spd = GPS.failed ? data[6] : GPS.speed;
+			if (spd_max <= (GPS.failed ? data[6] : GPS.speed)) {
+				spd_max = GPS.failed ? data[6] : GPS.speed;
 			}
 			$("#spd_obd_max").textContent = spd_max;
 			//vlt
@@ -1052,27 +1048,6 @@ function do_beep() {
 	}
 }
 
-let gps_options = {
-	enableHighAccuracy: true,
-	timeout: 30000,
-	maximumAge: 0
-};
-
-function getLocation() {
-	if (navigator.geolocation) {
-		navigator.geolocation.watchPosition(gpsData, function() {
-			gps_failed = true
-		}, gps_options);
-	}
-}
-
-function gpsData(position) {
-	gps_lat = position.coords.latitude;
-	gps_long = position.coords.longitude;
-	gps_speed = Math.trunc(position.coords.speed * 3.6);
-	gps_failed = position.coords.speed == null ? true : false;
-}
-
 function displayT(data) {
 	Object.keys(data).forEach(function(v) {
 		t_settings.push(data[v]);
@@ -1342,8 +1317,8 @@ function logs_handler() {
                     data[7], data[8], data[9], data[10], data[11], data[12], data[13], data[14],
                     data[15], data[16], data[17], data[20], data[21], data[22], data[23],
                     parseInt(data[24] / 60), data[25], data[26], data[27], data[28],
-                    data[29], data[30], data[31], data[32], data[33], gps_lat, gps_long,
-                    gps_speed, odo_dash
+                    data[29], data[30], data[31], data[32], data[33], GPS.lat, GPS.long,
+                    GPS.speed, odo_dash
                 ].join(" ") + "\n";
                 wr_freq++;
                 if (wr_freq >= map((1000/freq), 1, 20, 10, 200)) {
@@ -1412,7 +1387,7 @@ function logs_handler() {
             "&k2120=", data[25], "&k2122=", data[26], "&k2124=", data[27],
             "&k21e1=", data[28], "&k21e2=", data[29], "&k2125=", data[30],
             "&k2126=", data[31], "&kff1238=", data[32], "&k21fa=", data[33],
-            "&kff1006=", gps_lat, "&kff1005=", gps_long, "&kff1001=", gps_speed,
+            "&kff1006=", GPS.lat, "&kff1005=", GPS.long, "&kff1001=", GPS.speed,
             "&kff1204=", odo_trip, "&kff120c=", odo_dash
         ].join("");
 
@@ -2136,7 +2111,6 @@ class RPMBlink {
 	nightSwitch(true); //Load night mode
 	fetchT(); //Get telemetry/etc settings
 	do_beep();
-	getLocation();
 	if (!isMobile()) {
 		$("#zoom-in-btn").style.display = "none";
 		$("#zoom-out-btn").style.display = "none";
@@ -2181,7 +2155,7 @@ class RPMBlink {
 </tr>
 </table>
 
-<footer style="text-align:right; font-size:10px; opacity:.5;">v1.55</footer>
+<footer style="text-align:right; font-size:10px; opacity:.5;">v1.56</footer>
 </div>
 </div>
 </div>

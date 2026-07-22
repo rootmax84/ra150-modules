@@ -346,7 +346,7 @@
 			</div>
 		</div>
 	</div>
-<footer style="text-align: right;font-size: 10px;opacity: .15; font-family: monospace">v1.15</footer>
+<footer style="text-align: right;font-size: 10px;opacity: .15; font-family: monospace">v1.16</footer>
 <script>
 'use strict';
 
@@ -361,10 +361,6 @@ let session_start = false;
 const t_settings = [];
 let t_log = [];
 let telemetry_error = true;
-let gps_lat = 0;
-let gps_long = 0;
-let gps_speed = 0;
-let gps_failed = false;
 let logger;
 let freq;
 let clear_rbc = false;
@@ -955,12 +951,12 @@ function updateText(resp) {
 			}
 
 			//spd_obd1/gps
-			updateGauge("spd", gps_failed ? data[6] : gps_speed, '');
-			curr_spd = gps_failed ? data[6] : gps_speed;
+			updateGauge("spd", GPS.failed ? data[6] : GPS.speed, '');
+			curr_spd = GPS.failed ? data[6] : GPS.speed;
 			const spdLabel = document.querySelector('#spd .label');
 
 			if (spdLabel) {
-				spdLabel.textContent = `${localization.key['mdq.spd']} ${gps_failed ? "OBD1" : "GPS"}`;
+				spdLabel.textContent = `${localization.key['mdq.spd']} ${GPS.failed ? "OBD1" : "GPS"}`;
 			}
 			
 			//vlt
@@ -1132,27 +1128,6 @@ function do_beep() {
 		} catch (err) {}
 		brr(250); //Vibrate 250ms. Safari not supported
 	}
-}
-
-let gps_options = {
-	enableHighAccuracy: true,
-	timeout: 30000,
-	maximumAge: 0
-};
-
-function getLocation() {
-	if (navigator.geolocation) {
-		navigator.geolocation.watchPosition(gpsData, function() {
-			gps_failed = true
-		}, gps_options);
-	}
-}
-
-function gpsData(position) {
-	gps_lat = position.coords.latitude;
-	gps_long = position.coords.longitude;
-	gps_speed = Math.trunc(position.coords.speed * 3.6);
-	gps_failed = position.coords.speed == null ? true : false;
 }
 
 function displayT(data) {
@@ -1424,8 +1399,8 @@ function logs_handler() {
                     data[7], data[8], data[9], data[10], data[11], data[12], data[13], data[14],
                     data[15], data[16], data[17], data[20], data[21], data[22], data[23],
                     parseInt(data[24] / 60), data[25], data[26], data[27], data[28],
-                    data[29], data[30], data[31], data[32], data[33], gps_lat, gps_long,
-                    gps_speed, odo_dash
+                    data[29], data[30], data[31], data[32], data[33], GPS.lat, GPS.long,
+                    GPS.speed, odo_dash
                 ].join(" ") + "\n";
                 wr_freq++;
                 if (wr_freq >= map((1000/freq), 1, 20, 10, 200)) {
@@ -1495,7 +1470,7 @@ function logs_handler() {
             "&k2120=", data[25], "&k2122=", data[26], "&k2124=", data[27],
             "&k21e1=", data[28], "&k21e2=", data[29], "&k2125=", data[30],
             "&k2126=", data[31], "&kff1238=", data[32], "&k21fa=", data[33],
-            "&kff1006=", gps_lat, "&kff1005=", gps_long, "&kff1001=", gps_speed,
+            "&kff1006=", GPS.lat, "&kff1005=", GPS.long, "&kff1001=", GPS.speed,
             "&kff1204=", odo_trip, "&kff120c=", odo_dash
         ].join("");
 
@@ -1860,7 +1835,6 @@ onLoad(function() {
 	fetchT(); //Get telemetry/etc settings
 	displayRunTime(); //Запускаем отображение runtime/motorhours
 	do_beep();
-	getLocation();
 
 	bnd($("#boost_i"), "click", function() {
 		brr(50);
