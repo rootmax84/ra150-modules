@@ -1388,7 +1388,7 @@ function logs_handler() {
             "&k21e1=", data[28], "&k21e2=", data[29], "&k2125=", data[30],
             "&k2126=", data[31], "&kff1238=", data[32], "&k21fa=", data[33],
             "&kff1006=", GPS.lat, "&kff1005=", GPS.long, "&kff1001=", GPS.speed,
-            "&kff1204=", odo_trip, "&kff120c=", odo_dash
+            "&kff1007=", GPS.heading, "&kff1204=", odo_trip, "&kff120c=", odo_dash
         ].join("");
 
         t_log.push(request); // Collect logs in array if connection to telemetry is lost
