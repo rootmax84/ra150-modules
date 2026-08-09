@@ -425,7 +425,7 @@
 							<span class="boost-rpm-speed-dot"></span>
 							<span class="boost-rpm-speed-value" id="tachDigital">*</span><span class="boost-rpm-speed-unit">rpm</span>
 							<span class="boost-rpm-speed-dot"></span>
-							<span class="boost-rpm-speed-value" id="speedValue">*</span><span class="boost-rpm-speed-unit">km/h</span>
+							<span class="boost-rpm-speed-value" id="speedValue">*</span><span class="boost-rpm-speed-unit" id="spd-unit">km/h</span>
 						</div>
 
 						<div class="metrics-row">
@@ -477,7 +477,7 @@
 								<span class="indicator-label">BS2</span>
 							</div>
 						</div>
-						<div class="toyota-badge">TOY80 · v1.04 · <span id="runtime">00:00:00</span></div>
+						<div class="toyota-badge">TOY80 · v1.05 · <span id="runtime">00:00:00</span></div>
 					</div>
                 </div>
             </div>
@@ -993,7 +993,8 @@ function updateText(resp) {
 			//spd_obd1/gps
 			dash.setSpeed(GPS.failed ? data[6] : GPS.speed);
 			curr_spd = GPS.failed ? data[6] : GPS.speed;
-			
+			$("#spd-unit").textContent = GPS.failed ? "km/h" : "km/h GPS";
+
 			//vlt
 			dash.setVLT(data[32]);
 
