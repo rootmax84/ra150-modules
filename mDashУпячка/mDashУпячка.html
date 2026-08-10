@@ -1196,7 +1196,7 @@ function displayT(data) {
 				session_start = true;
 				session = last_session;
 			} else {
-				localStorage.setItem("last_session_time", last_session);
+				localStorage.setItem("last_session_time", session);
 			}
 			logs_handler();
 		}, 5000);
