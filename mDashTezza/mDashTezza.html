@@ -590,7 +590,7 @@
 							</div>
 						</div>
 					</div>
-					<footer id="zoom-reset" style="text-align:center; font-size:10px; opacity:0; white-space:nowrap;">v1.26</footer>
+					<footer id="zoom-reset" style="text-align:center; font-size:10px; opacity:0; white-space:nowrap;">v1.50</footer>
 				</div>
 			</div>
 		</div>
@@ -679,6 +679,7 @@ class Gauge {
 			this.setupNumbers();
 		}
 		this.updateTicks(); // Обновляем деления
+		this.peakMinTimestamp = Date.now();
 	}
 	calculateBigMarkAngles() {
 		this.bigMarkAngles = [];
@@ -763,14 +764,21 @@ class Gauge {
 		this.updateNeedle();
 		this.updatePeaks();
 	}
-	updatePeaks() {
-		if (this.currentValue > this.peakMax) {
-			this.peakMax = this.currentValue;
-		}
-		if (this.currentValue < this.peakMin) {
-			this.peakMin = this.currentValue;
-		}
-	}
+    updatePeaks() {
+        const now = Date.now();
+        if (this.currentValue > this.peakMax) {
+            this.peakMax = this.currentValue;
+        }
+        if (this.currentValue < this.peakMin) {
+            this.peakMin = this.currentValue;
+            this.peakMinTimestamp = now;   // обновили минимум – сброс таймера
+        }
+        // Если минимум равен минимально возможному значению шкалы и прошло >10 сек, заменяем на текущее значение
+        if (this.peakMin === this.minValue && (now - this.peakMinTimestamp) > 10000) {
+            this.peakMin = this.currentValue;
+            this.peakMinTimestamp = now;   // чтобы не сбрасывать постоянно
+        }
+    }
 	updateNeedle() {
 		const percentage = (this.currentValue - this.minValue) / (this.maxValue - this.minValue);
 		const degrees = this.startAngle + (percentage * this.gaugeArc); // Переводим процент в градусы
@@ -1802,24 +1810,44 @@ function resetOdo() {
 	redDialog.make(dialogOpt);
 }
 
-function zoomIn() {
-	zoom < 2.5 ? zoom += 0.01 : zoom = 2.5;
-	zoom = Math.round(zoom * 100) / 100;
-	$("#main").style.transform = `scale(${zoom})`;
-	localStorage.setItem('zoom-mdt', zoom);
+const MIN_ZOOM = 0.5;
+const MAX_ZOOM = 2.5;
+const ZOOM_SENSITIVITY = 0.5;       // 0.2 — очень плавно, 1 — без изменений
+const ZOOM_SMOOTH_ENABLED = true;
+const ZOOM_SMOOTH_FACTOR = 0.3;     // скорость выравнивания (меньше = плавнее)
+
+let currentZoom = zoom;             // реальное значение на экране
+let targetZoom = zoom;
+let zoomAnimationFrame = null;
+
+function applyZoom(z) {
+    currentZoom = z;
+    document.getElementById('main').style.transform = `scale(${z})`;
 }
 
-function zoomOut() {
-	zoom > 0.5 ? zoom -= 0.01 : zoom = 0.5;
-	zoom = Math.round(zoom * 100) / 100;
-	$("#main").style.transform = `scale(${zoom})`;
-	localStorage.setItem('zoom-mdt', zoom);
+function smoothZoom() {
+    if (Math.abs(currentZoom - targetZoom) < 0.001) {
+        applyZoom(targetZoom);
+        zoomAnimationFrame = null;
+        return;
+    }
+    currentZoom += (targetZoom - currentZoom) * ZOOM_SMOOTH_FACTOR;
+    applyZoom(currentZoom);
+    zoomAnimationFrame = requestAnimationFrame(smoothZoom);
 }
 
-function zoomReset() {
-	zoom = 1;
-	$("#main").style.transform = `scale(${zoom})`;
-	localStorage.setItem('zoom-mdt', zoom);
+function setZoom(newZoom) {
+    targetZoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, newZoom));
+    targetZoom = Math.round(targetZoom * 100) / 100;
+    zoom = targetZoom;                         // сохраняем в переменную для localStorage
+    localStorage.setItem('zoom-mdt', targetZoom);
+    if (ZOOM_SMOOTH_ENABLED) {
+        if (!zoomAnimationFrame) {
+            zoomAnimationFrame = requestAnimationFrame(smoothZoom);
+        }
+    } else {
+        applyZoom(targetZoom);
+    }
 }
 
 function orientationAlert() {
@@ -1839,9 +1867,7 @@ onLoad(function () {
 		orientationAlert()
 	}
 	waitForVisibility();
-	bnd($("#flp"), "click", zoomIn);
-	bnd($("#afr"), "click", zoomOut);
-	bnd($("#zoom-reset"), "click", zoomReset);
+	bnd($("#zoom-reset"), "click", () => setZoom(1));
 	bnd($("#speedometer"), "dblclick", changeBrand);
 	longTap("speedometer",changeBrand,3000);
 	setTimeout(function () {
@@ -1871,6 +1897,68 @@ onLoad(function () {
 	voiceCMD("#layout");
 	
 	setTimeout(bmw, 3000);
+
+	// Показ пиковых значений при клике на любой прибор (через elementsFromPoint)
+	document.getElementById('main-dashboard').addEventListener('click', function(e) {
+		const elements = document.elementsFromPoint(e.clientX, e.clientY);
+		let gaugeEl = null;
+
+		// Ищем первый элемент с классом sub-gauge или gauge (идём от верхнего к нижнему)
+		for (const el of elements) {
+			if (el.classList.contains('sub-gauge') || el.classList.contains('gauge')) {
+				gaugeEl = el;
+				break;
+			}
+		}
+
+		if (!gaugeEl || !dashboard || !dashboard.gauges) return;
+
+		// Поднимаемся до элемента с id, если его нет (например, попали во внутренний декоративный div)
+		while (gaugeEl && !gaugeEl.id) {
+			gaugeEl = gaugeEl.parentElement;
+		}
+		if (!gaugeEl) return;
+
+		const gauge = dashboard.gauges[gaugeEl.id];
+		if (!gauge) return;
+
+		const min = gauge.peakMin, max = gauge.peakMax;
+		showNotification(`${gaugeEl.id.toUpperCase()}: min/max = ${min}/${max}`);
+	});
+	
+	// Pinch-to-zoom с чувствительностью
+	let pinchDistStart = 0, pinchZoomStart = 1;
+
+	document.addEventListener('touchstart', function(e) {
+		if (e.touches.length === 2) {
+			e.preventDefault();
+			pinchDistStart = Math.hypot(
+				e.touches[0].clientX - e.touches[1].clientX,
+				e.touches[0].clientY - e.touches[1].clientY
+			);
+			pinchZoomStart = currentZoom;   // берём актуальное значение с экрана
+		}
+	}, { passive: false });
+
+	document.addEventListener('touchmove', function(e) {
+		if (e.touches.length !== 2 || pinchDistStart === 0) return;
+		e.preventDefault();
+		const dist = Math.hypot(
+			e.touches[0].clientX - e.touches[1].clientX,
+			e.touches[0].clientY - e.touches[1].clientY
+		);
+		if (dist === 0) return;
+		const ratio = dist / pinchDistStart;
+		const adjusted = Math.pow(ratio, ZOOM_SENSITIVITY);   // замедление жеста
+		setZoom(pinchZoomStart * adjusted);
+	}, { passive: false });
+
+	document.addEventListener('touchend', () => { pinchDistStart = 0; });
+	document.addEventListener('touchcancel', () => { pinchDistStart = 0; });
+	
+	['gesturestart', 'gesturechange', 'gestureend'].forEach(evt => {
+		document.addEventListener(evt, e => e.preventDefault());
+	});
 });
 
 function processDash(init = null) {
@@ -2182,6 +2270,12 @@ function processDash(init = null) {
 		});
 	}
 
+	// Сохраняем все приборы для внешнего доступа (min/max, клики)
+	dashboard.gauges = {
+		tachometer, speedometer, boost,
+		oil, volt, water, egt, atf, iat, eot, aat, ext, afr, flp
+	};
+
 	return dashboard;
 }
 
@@ -2190,7 +2284,7 @@ const waitForVisibility = async () => {
 	while (true) {
 		const element = document.getElementById('x');
 		if (element && getComputedStyle(element).display !== 'none') {
-			$("#main").style.transform = `scale(${zoom})`; // Применяем настройки масштабирования
+			applyZoom(zoom); // Применяем настройки масштабирования
 			dashboard = processDash(true); // Инициализируем разметку
 
 			// Плавно применяем opacity к каждому элементу с классом .number
