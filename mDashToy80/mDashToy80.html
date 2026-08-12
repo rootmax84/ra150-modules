@@ -545,6 +545,15 @@
           'afrVal':  {type:'minmax'},
           'vltVal':  {type:'minmax'}
         };
+		
+		this.minThresholds = {
+			'eopVal': 0,
+			'flpVal': 0,
+			'afrVal': 0,
+			'vltVal': 0
+		};
+
+		this.minTimestamps = {};
       }
 
       buildTachometer() {
@@ -572,22 +581,39 @@
 
       // Минимальное/максимальное отслеживание
       updateMinMax(id, value) {
-        const config = this.minMaxConfig[id];
-        if (!config) return;
-        if (!this.minMax[id]) this.minMax[id] = { min: Infinity, max: -Infinity };
-        const mm = this.minMax[id];
+		const config = this.minMaxConfig[id];
+		if (!config) return;
+		if (!this.minMax[id]) this.minMax[id] = { min: Infinity, max: -Infinity };
+		const mm = this.minMax[id];
+
 		if (value === null || value === undefined || value === -40) {
-          mm.min = Infinity;
-          mm.max = -Infinity;
-          return;
-        }
-        if (config.type === 'maxOnly') {
-          if (value > mm.max) mm.max = value;
-        } else {
-          if (value < mm.min) mm.min = value;
-          if (value > mm.max) mm.max = value;
-        }
-      }
+			mm.min = Infinity;
+			mm.max = -Infinity;
+			delete this.minTimestamps[id]; // сбрасываем таймер
+			return;
+		}
+
+		const now = Date.now();
+
+		if (config.type === 'maxOnly') {
+			if (value > mm.max) mm.max = value;
+		} else {
+			if (value < mm.min) {
+				mm.min = value;
+				this.minTimestamps[id] = now;
+			}
+			if (value > mm.max) mm.max = value;
+
+			const threshold = this.minThresholds[id];
+			if (threshold !== undefined) {
+				const lastMinTime = this.minTimestamps[id] || 0;
+				if (mm.min === threshold && (now - lastMinTime) > 10000) {
+					mm.min = value;
+					this.minTimestamps[id] = now;
+				}
+			}
+		}
+	  }
 
       showMetricTooltip(id) {
         const el = document.getElementById(id);
