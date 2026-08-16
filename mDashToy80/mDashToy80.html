@@ -477,7 +477,7 @@
 								<span class="indicator-label">BS2</span>
 							</div>
 						</div>
-						<div class="toyota-badge">TOY80 · v1.05 · <span id="runtime">00:00:00</span></div>
+						<div class="toyota-badge">RUNTIME · <span id="runtime">00:00:00</span></div>
 					</div>
                 </div>
             </div>
@@ -1160,6 +1160,7 @@ function displayT(data) {
 				session = last_session;
 			} else {
 				localStorage.setItem("last_session_time", session);
+				last_session = session;
 			}
 			logs_handler();
 		}, 5000);

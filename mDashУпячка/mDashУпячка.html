@@ -493,7 +493,6 @@
                 </div> <!-- Закрытие pure-g -->
             </div> <!-- Закрытие content -->
         </div> <!-- Закрытие main -->
-		<footer>УПЧК &middot; ДАШБОРДЭ &middot; v11адинадин</footer>
     </div> <!-- Закрытие layout -->
 
 <script>
@@ -1199,6 +1198,7 @@ function displayT(data) {
 				session = last_session;
 			} else {
 				localStorage.setItem("last_session_time", session);
+				last_session = session;
 			}
 			logs_handler();
 		}, 5000);

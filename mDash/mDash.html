@@ -1456,6 +1456,7 @@ function displayT(data) {
 				session = last_session;
 			} else {
 				localStorage.setItem("last_session_time", session);
+				last_session = session;
 			}
 			logs_handler();
 		}, 5000);
@@ -2607,7 +2608,6 @@ class RPMBlink {
 </tr>
 </table>
 
-<footer style="text-align:right; font-size:10px; opacity:.5;">v2.36</footer>
 </div>
 </div>
 </div>

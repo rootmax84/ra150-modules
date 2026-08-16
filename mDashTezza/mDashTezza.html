@@ -590,7 +590,6 @@
 							</div>
 						</div>
 					</div>
-					<footer id="zoom-reset" style="text-align:center; font-size:10px; opacity:0; white-space:nowrap;">v1.50</footer>
 				</div>
 			</div>
 		</div>
@@ -1148,6 +1147,7 @@ function displayT(data) {
 				session = last_session;
 			} else {
 				localStorage.setItem("last_session_time", session);
+				last_session = session;
 			}
 			logs_handler();
 		}, 5000);
@@ -1867,7 +1867,6 @@ onLoad(function () {
 		orientationAlert()
 	}
 	waitForVisibility();
-	bnd($("#zoom-reset"), "click", () => setZoom(1));
 	bnd($("#speedometer"), "dblclick", changeBrand);
 	longTap("speedometer",changeBrand,3000);
 	setTimeout(function () {
