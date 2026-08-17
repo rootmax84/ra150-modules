@@ -377,7 +377,7 @@
 					<div class="spinner"></div>
 				</div>
 				<div class="content" id="cMenu">
-					<div class="pure-g" style="padding-top: 40px;" id="x" hidden>
+					<div class="pure-g" style="padding:30px 0 15px 0;" id="x" hidden>
 						<div id="main-dashboard">
 							<div class="dashboard">
 								<div class="gauge side-gauge" id="tachometer">
@@ -1156,7 +1156,7 @@ function displayT(data) {
 	freq = 1000 / t_settings[14]; //Logger frequency
 	if (t_settings[17] === "enabled") bot = new Bot(t_settings[18], t_settings[19]); //TG bot init
 	if (t_settings[25] === "enabled") setInterval(() => {
-		remoteCMD(20)
+		remoteCMD()
 	}, 10000); // enable bot commands
 	parseInt(t_settings?.[26]) ? fetchGaugesWS(250, true) : fetchGauges(250, true); // Protocol. 1 - WebSocket 0 - HTTP Fetch API
 }
