@@ -379,11 +379,7 @@ function updateText(resp) {
 
 			//rpm
 			updateDisplay("rpm", data[7]);
-			if (data[7] >= 6000) {
-				RPMBlink.start();
-			} else {
-				RPMBlink.stop();
-			}
+			flickerBackground(data[7] < 6000 ? false : true);
 
 			//spd_obd1/gps
 			updateDisplay("spd", GPS.failed ? data[6] : GPS.speed);
@@ -1271,30 +1267,25 @@ function addDynamicStyles() {
     document.head.appendChild(styleSheet);
 }
 
-class RPMBlink {
-  static start() {
-    if (RPMBlink.active) return;
-    RPMBlink.active = true;
-    RPMBlink.el = $('#rpm');
-    if (!RPMBlink.el) return;
-    
-    RPMBlink.el.style.opacity = '1';
-    let last = 0;
-    
-    const animate = (t) => {
-      if (!RPMBlink.active) return;
-      if (t - last >= 125) {
-        RPMBlink.el.style.opacity = RPMBlink.el.style.opacity === '1' ? '0' : '1';
-        last = t;
-      }
-      requestAnimationFrame(animate);
-    };
-    requestAnimationFrame(animate);
-  }
-  
-  static stop() {
-    RPMBlink.active = false;
-    if (RPMBlink.el) RPMBlink.el.style.opacity = '1';
+let flickerInterval = null;
+let isBlack = true;
+
+function flickerBackground(enable) {
+  if (enable) {
+
+    if (flickerInterval) return;
+
+    flickerInterval = setInterval(() => {
+      const color = isBlack ? '#961911' : 'black';
+      document.body.style.setProperty('background-color', color, 'important');
+      isBlack = !isBlack;
+    }, 100);
+  } else {
+
+    clearInterval(flickerInterval);
+    flickerInterval = null;
+    isBlack = true;
+    document.body.style.setProperty('background-color', 'black', 'important');
   }
 }
 
@@ -1362,7 +1353,7 @@ function resetSystem() {
 	calculate(0);
 	$('#tel').style.textShadow = '0 0 5px #0f0';
 	$('#tel').style.color = 'inherit';
-	RPMBlink.stop();
+	flickerBackground(false);
 }
 
 // Массив с фильтрами
