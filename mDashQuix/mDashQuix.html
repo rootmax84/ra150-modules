@@ -275,6 +275,10 @@
 	  height: 100%;
 	  position: absolute;
 	}
+
+	.switch {
+	  transform: scale(.8);
+	}
   </style>
 </head>
 <body style="opacity:0">
@@ -357,7 +361,7 @@ let data; //MCU data array
 let data_safe; //MCU safe config array
 let session = Date.now();
 let session_start = false;
-const t_settings = [];
+const t_settings = {};
 let t_log = [];
 let telemetry_error = true;
 let logger;
@@ -863,7 +867,7 @@ function settingsDialog() {
 }
 
 function updateText(resp) {
-    let delay = t_settings[11] || 100;
+    let delay = t_settings.gauges_throttling || 100;
 	if (typeof reload_settings === 'boolean' && reload_settings) {
 		ext_cmd_stop = true;
 		reload_settings = false;
@@ -1003,9 +1007,9 @@ function updateText(resp) {
 				old_rlc = data[33];
 			} else {
 				if (beep && warn_sended && bot !== null) {
-					if (t_settings[24] === "enabled") {
+					if (t_settings.bot_screenshot === "1") {
 						Screenshot('main-dashboard').then(formData => {
-							return bot.sendPhoto(formData, "🟢 <code>OK</code>", t_settings[19]);
+							return bot.sendPhoto(formData, "🟢 <code>OK</code>", t_settings.bot_chatid);
 						});
 					} else {
 						bot.sendMessage("🟢 <code>OK</code>", null, null, false);
@@ -1114,9 +1118,9 @@ function do_beep() {
 		try {
 			if (a_count == 1 && bot !== null) {
 				const code = calculate(data[33], true);
-				if (t_settings[24] === "enabled") {
+				if (t_settings.bot_screenshot === "1") {
 					Screenshot('main-dashboard').then(formData => {
-						return bot.sendPhoto(formData, `🔴 <code>${code}</code>`, t_settings[19]);
+						return bot.sendPhoto(formData, `🔴 <code>${code}</code>`, t_settings.bot_chatid);
 					});
 				} else {
 					bot.sendMessage(`🔴 <code>${code}</code>`, null, null, false);
@@ -1131,19 +1135,19 @@ function do_beep() {
 
 function displayT(data) {
 	Object.keys(data).forEach(function(v) {
-		t_settings.push(data[v]);
+	    t_settings[v] = data[v];
 	});
 
 	//Init logger/telemetry
-	if (t_settings[13] === "enabled") {
+	if (t_settings.logger_enable === "1") {
 		bnd($("#log-clear-btn"), "click", logClearBtn);
 		bnd($("#log-save-btn"), "click", logSaveBtn);
 		localStorage.getItem("log") !== null ? logger = localStorage.getItem("log") : logger_init();
 		if (logger.length >= 5000000) logger_full = true;
 	}
 	
-	if (t_settings[0] === "enabled" || t_settings[13] === "enabled") {
-		session_stop = Number(t_settings?.[7]) || 0;
+	if (t_settings.telemetry_enable === "1" || t_settings.logger_enable === "1") {
+		session_stop = Number(t_settings?.telemetry_stop) || 0;
 		datapoints = session_stop === 0 ? 0 : Number(localStorage.getItem('last_session_datapoints'));
 		setTimeout(() => {
 			let expirationTime = last_session + (session_stop * 60 * 1000);
@@ -1159,10 +1163,10 @@ function displayT(data) {
 		}, 5000);
 	}
 	
-	freq = 1000 / t_settings[14]; //Logger frequency
-	if (t_settings[17] === "enabled") bot = new Bot(t_settings[18], t_settings[19]); //TG bot init
-	if (t_settings[25] === "enabled") setInterval(()=>{remoteCMD()}, 10000); // enable bot commands
-	parseInt(t_settings?.[26]) ? fetchGaugesWS(250, true) : fetchGauges(250, true); // Protocol. 1 - WebSocket 0 - HTTP Fetch API
+	freq = 1000 / t_settings.logs_freq; //Logger frequency
+	if (t_settings.bot_enable === "1") bot = new Bot(t_settings.bot_token, t_settings.bot_chatid); //TG bot init
+	if (t_settings.bot_cmd === "1") setInterval(()=>{remoteCMD()}, 10000); // enable bot commands
+	parseInt(t_settings?.gauges_websocket) ? fetchGaugesWS(250, true) : fetchGauges(250, true); // Protocol. 1 - WebSocket 0 - HTTP Fetch API
 }
 
 function fetchT() {
@@ -1388,7 +1392,7 @@ function logs_handler() {
     }
 
     // Local storage logs
-    if (t_settings[13] === "enabled") {
+    if (t_settings.logger_enable === "1") {
         try {
             let storage_left = parseInt(map(logger.length, 0, 5000000, 0, 100));
             $("#sleft").textContent = storage_left + "%";
@@ -1421,7 +1425,7 @@ function logs_handler() {
     }
 
     // Telemetry upload
-    if (t_settings[0] === "enabled" && t_settings[1].length > 0) {
+    if (t_settings.telemetry_enable === "1" && t_settings.telemetry_host.length > 0) {
         const normalInterval = freq; // Интервал freq мс
         const errorInterval = 10000; // Интервал 10 сек
 
@@ -1431,7 +1435,7 @@ function logs_handler() {
                 l.startsWith("SESSION_START:") && l.includes(`session=${session}`)
             );
             if (!session_start && !hasStartInQueue) {
-                const start_request = `session=${session}&time=${session}&lang=${lang}&profileName=${t_settings[2] || 'RedManage'}`;
+                const start_request = `session=${session}&time=${session}&lang=${lang}&profileName=${t_settings.telemetry_profile || 'RedManage'}`;
                 t_log.push("SESSION_START:" + start_request);
                 localStorage.setItem("last_session_time", session);
                 last_session = session;
@@ -1486,7 +1490,7 @@ function logs_handler() {
         const uploadLog = (log) => {
             return new Promise((resolve, reject) => {
                 const payload = log.startsWith("SESSION_START:") ? log.replace("SESSION_START:", "") : log;
-                ajaxReq("POST", t_settings[1],
+                ajaxReq("POST", t_settings.telemetry_host,
                     (resp) => {
                         if (resp !== "OK!") {
                             telemetry_error = true;
@@ -1505,7 +1509,7 @@ function logs_handler() {
                         reject(new Error("Upload error"));
                     },
                     payload,
-                    t_settings[3]
+                    t_settings.telemetry_token
                 );
             });
         };
@@ -1590,7 +1594,7 @@ function logs_handler() {
     // Планирование следующего вызова
     setTimeout(
         logs_handler,
-        t_settings[0] === "enabled" ? (session_start ? freq : longOffline ? freq : 2500) : freq
+        t_settings.telemetry_enable === "1" ? (session_start ? freq : longOffline ? freq : 2500) : freq
     );
 }
 
